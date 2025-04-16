@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTemperature } from '../context/TemperatureContext';
-import TemperatureToggle from './TemperatureToggle';
 
 const WeatherInfo = ({ weatherData }) => {
-  const { isCelsius, convertTemp } = useTemperature();
+  const { temperatureUnit, convertTemp } = useTemperature();
 
   if (!weatherData?.current?.temperature) {
     return (
@@ -18,28 +17,25 @@ const WeatherInfo = ({ weatherData }) => {
 
   const getWindSpeed = () => {
     const speedMph = current.windSpeed || 0;
-    if (isCelsius) {
-      // Convert mph to kph
-      return `${Math.round(speedMph * 1.60934)} km/h`;
+    if (temperatureUnit === 'C') {
+      // Convert mph to kph and round to 1 decimal place
+      return `${(speedMph * 1.60934).toFixed(1)} km/h`;
     }
-    return `${speedMph} mph`;
+    return `${speedMph.toFixed(1)} mph`;
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.mainInfo}>
         <Text style={styles.temperature}>
-          {convertTemp(current.temperature)}°{isCelsius ? 'C' : 'F'}
+          {convertTemp(current.temperature)}°{temperatureUnit}
         </Text>
         <Text style={styles.description}>
           {current.description || 'No description available'}
         </Text>
         <Text style={styles.feelsLike}>
-          Feels like: {convertTemp(current.feelsLike)}°{isCelsius ? 'C' : 'F'}
+          Feels like: {convertTemp(current.feelsLike)}°{temperatureUnit}
         </Text>
-        <View style={styles.toggleWrapper}>
-          <TemperatureToggle />
-        </View>
       </View>
 
       <View style={styles.detailsContainer}>
@@ -99,10 +95,6 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 5,
     marginBottom: 5,
-  },
-  toggleWrapper: {
-    marginTop: 5,
-    marginBottom: 10,
   },
   detailsContainer: {
     marginTop: 10,

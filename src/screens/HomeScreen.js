@@ -137,8 +137,48 @@ const HomeScreen = () => {
 
       <View style={styles.recommendationContainer}>
         {recommendation && (
-          <Text style={styles.recommendationText}>{recommendation}</Text>
+          <>
+            <Text style={styles.recommendationText}>
+              {recommendation.recommendation}
+            </Text>
+            
+            {recommendation.uvAdvisory.length > 0 && (
+              <View style={styles.uvAdvisoryContainer}>
+                <Text style={styles.uvAdvisoryTitle}>Sun Protection:</Text>
+                {recommendation.uvAdvisory.map((advice, index) => (
+                  <Text key={index} style={styles.uvAdvisoryText}>
+                    • {advice}
+                  </Text>
+                ))}
+              </View>
+            )}
+
+            {recommendation.temperatureShift?.hasShift && (
+              <View style={styles.temperatureShiftContainer}>
+                <Text style={styles.temperatureShiftTitle}>
+                  Temperature Change Alert:
+                </Text>
+                <Text style={styles.temperatureShiftText}>
+                  Temperature will change by {Math.abs(Math.round((recommendation.temperatureShift.futureTemp - recommendation.temperatureShift.currentTemp) * 5/9))}°C in {recommendation.temperatureShift.hoursAhead} hours.
+                </Text>
+                <Text style={styles.futureRecommendationText}>
+                  Later: {recommendation.futureRecommendation}
+                </Text>
+              </View>
+            )}
+          </>
         )}
+      </View>
+
+      <View style={styles.comfortCategoryContainer}>
+        <Text style={styles.comfortCategoryText}>
+          {recommendation?.adjustedFeelsLike !== undefined && 
+            (recommendation.adjustedFeelsLike - recommendation.originalFeelsLike > 3
+              ? "You tend to get cold easily"
+              : recommendation.adjustedFeelsLike - recommendation.originalFeelsLike < -3
+              ? "You tend to feel warm more quickly"
+              : "Your comfort level is typical")}
+        </Text>
       </View>
 
       <View style={styles.feedbackContainer}>
@@ -191,9 +231,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   recommendationContainer: {
-    padding: 20,
+    padding: 15,
     backgroundColor: '#f5f5f5',
-    margin: 20,
+    margin: 15,
     borderRadius: 15,
     elevation: 2,
     shadowColor: '#000',
@@ -213,6 +253,62 @@ const styles = StyleSheet.create({
   feedbackContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  uvAdvisoryContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  uvAdvisoryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFA500',
+    marginBottom: 5,
+  },
+  uvAdvisoryText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 10,
+  },
+  temperatureShiftContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  temperatureShiftTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 5,
+  },
+  temperatureShiftText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  futureRecommendationText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  comfortCategoryContainer: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    padding: 10,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  comfortCategoryText: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

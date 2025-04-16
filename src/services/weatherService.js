@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 // Mock weather service that generates simulated weather data
 const getRandomTemp = (baseTemp, variance) => {
   return Math.round(baseTemp + (Math.random() - 0.5) * variance);
@@ -36,6 +38,8 @@ const getWeatherDescription = (temp) => {
 
 const API_KEY = 'aa08d88789de4340a0430426251504';
 const BASE_URL = 'https://api.weatherapi.com/v1';
+const CACHE_KEY = '@weatherwear_weather_cache';
+const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 // Map WeatherAPI condition codes to our icon set
 const mapWeatherIcon = (code) => {
@@ -57,86 +61,69 @@ const mapWeatherIcon = (code) => {
   return '02d';
 };
 
-export const getWeather = async (latitude, longitude) => {
+const getCachedWeather = async () => {
   try {
-    const query = `${latitude},${longitude}`;
-    const response = await fetch(
-      `${BASE_URL}/forecast.json?key=${API_KEY}&q=${query}&days=1&aqi=yes`
-    );
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const { data, timestamp } = JSON.parse(cached);
+    const now = Date.now();
+
+    if (now - timestamp > CACHE_EXPIRY) {
+      await AsyncStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[Weather API] Error reading from cache:', error);
+    return null;
+  }
+};
+
+const setCachedWeather = async (data) => {
+  try {
+    const cacheData = {
+      data,
+      timestamp: Date.now(),
+    };
+    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+  } catch (error) {
+    console.error('[Weather API] Error writing to cache:', error);
+  }
+};
+
+export const getWeather = async () => {
+  try {
+    // Try to get cached data first
+    const cachedData = await getCachedWeather();
+    if (cachedData) {
+      console.log('[Weather API] Using cached data');
+      return cachedData;
+    }
+
+    // If no cached data or expired, fetch new data
+    console.log('[Weather API] Fetching new data');
+    const response = await fetch('https://api.weatherapi.com/v1/current.json?key=YOUR_API_KEY&q=auto:ip');
+    const data = await response.json();
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Weather API Error:', errorData);
-      throw new Error(errorData.error?.message || 'Failed to fetch weather data');
+      throw new Error(data.error?.message || 'Failed to fetch weather data');
     }
 
-    const data = await response.json();
-    console.log('Raw Weather API Response:', JSON.stringify(data, null, 2));
+    // Cache the new data
+    await setCachedWeather(data);
 
-    // Validate current weather data
-    if (!data.current) {
-      console.error('Missing current weather data');
-      throw new Error('Invalid API response structure');
-    }
-
-    // Create current weather object
-    const currentWeather = {
-      temperature: Math.round(data.current.temp_f),
-      feelsLike: Math.round(data.current.feelslike_f),
-      humidity: data.current.humidity,
-      windSpeed: Math.round(data.current.wind_mph),
-      description: data.current.condition.text.toLowerCase(),
-      icon: mapWeatherIcon(data.current.condition.code)
-    };
-
-    // Validate and process forecast data
-    let hourlyForecast = [];
-    if (data.forecast?.forecastday?.[0]?.hour) {
-      const currentTime = new Date();
-      hourlyForecast = data.forecast.forecastday[0].hour
-        .filter(hour => new Date(hour.time) > currentTime)
-        .slice(0, 6)
-        .map(hour => ({
-          time: new Date(hour.time).getTime(),
-          temperature: Math.round(hour.temp_f),
-          feelsLike: Math.round(hour.feelslike_f),
-          description: hour.condition.text.toLowerCase(),
-          icon: mapWeatherIcon(hour.condition.code)
-        }));
-
-      // If we don't have enough hours in the current day, try to get some from the next day
-      if (hourlyForecast.length < 6 && data.forecast?.forecastday?.[1]?.hour) {
-        const nextDayHours = data.forecast.forecastday[1].hour
-          .slice(0, 6 - hourlyForecast.length)
-          .map(hour => ({
-            time: new Date(hour.time).getTime(),
-            temperature: Math.round(hour.temp_f),
-            feelsLike: Math.round(hour.feelslike_f),
-            description: hour.condition.text.toLowerCase(),
-            icon: mapWeatherIcon(hour.condition.code)
-          }));
-        hourlyForecast = [...hourlyForecast, ...nextDayHours];
-      }
-    }
-
-    // Return both current and hourly data
-    const weatherData = {
-      current: currentWeather,
-      hourly: hourlyForecast
-    };
-
-    console.log('Processed Weather Data:', JSON.stringify(weatherData, null, 2));
-    return weatherData;
-
+    return data;
   } catch (error) {
-    console.error('Error in getWeather:', error.message);
-    console.log('Falling back to mock data');
-    return getMockWeather(latitude);
+    console.error('[Weather API] Error:', error);
+    throw error;
   }
 };
 
 // Fallback mock weather data function
 const getMockWeather = (latitude) => {
+  console.log('[Weather API] Using mock weather data');
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const baseTemp = getSeasonalBaseTemp(latitude, currentMonth);

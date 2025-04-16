@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const FEEDBACK_KEY = '@weatherwear_feedback';
 const PREFERENCES_KEY = '@weatherwear_preferences';
 const LAST_FEEDBACK_KEY = '@weatherwear_last_feedback';
+const COMFORT_BIAS_KEY = '@weatherwear_comfort_bias';
 
 // Structure to store feedback with weather conditions
 const createFeedbackEntry = (weatherData, feedback) => ({
@@ -13,7 +14,40 @@ const createFeedbackEntry = (weatherData, feedback) => ({
   windSpeed: weatherData.current.windSpeed,
   description: weatherData.current.description,
   feedback,
+  weight: 1 // Initial weight for new feedback
 });
+
+// Calculate weighted comfort bias from feedback history
+const calculateComfortBias = (feedbackHistory) => {
+  if (!feedbackHistory || feedbackHistory.length === 0) return 0;
+
+  let totalWeight = 0;
+  let weightedSum = 0;
+
+  // Sort feedback by timestamp (newest first)
+  const sortedFeedback = [...feedbackHistory].sort((a, b) => 
+    new Date(b.timestamp) - new Date(a.timestamp)
+  );
+
+  // Calculate weights and sum
+  sortedFeedback.forEach((entry, index) => {
+    // Exponential decay: newer feedback has higher weight
+    const timeWeight = Math.pow(0.9, index);
+    const feedbackWeight = entry.weight * timeWeight;
+    
+    if (entry.feedback === 'cold') {
+      weightedSum += feedbackWeight;
+    } else if (entry.feedback === 'warm') {
+      weightedSum -= feedbackWeight;
+    }
+    
+    totalWeight += feedbackWeight;
+  });
+
+  // Normalize and round to nearest 0.5
+  const bias = weightedSum / totalWeight;
+  return Math.round(bias * 2) / 2;
+};
 
 export const storeFeedback = async (weatherData, feedback) => {
   try {
@@ -31,8 +65,12 @@ export const storeFeedback = async (weatherData, feedback) => {
     };
     await AsyncStorage.setItem(LAST_FEEDBACK_KEY, JSON.stringify(lastFeedback));
 
+    // Update comfort bias
+    const newBias = calculateComfortBias(feedbackData);
+    await AsyncStorage.setItem(COMFORT_BIAS_KEY, JSON.stringify(newBias));
+
     // Update preferences
-    await updatePreferences(weatherData, feedback);
+    await updatePreferences(weatherData, feedback, newBias);
 
     return true;
   } catch (error) {
@@ -86,7 +124,7 @@ export const getFeedbackHistory = async () => {
   }
 };
 
-const updatePreferences = async (weatherData, feedback) => {
+const updatePreferences = async (weatherData, feedback, comfortBias) => {
   try {
     const preferencesString = await AsyncStorage.getItem(PREFERENCES_KEY);
     const preferences = preferencesString ? JSON.parse(preferencesString) : {
@@ -101,12 +139,12 @@ const updatePreferences = async (weatherData, feedback) => {
     
     if (feedback === 'cold' && temp > preferences.coldThreshold) {
       preferences.coldThreshold += 1;
-      preferences.temperatureOffset += 0.5;
     } else if (feedback === 'warm' && temp < preferences.hotThreshold) {
       preferences.hotThreshold -= 1;
-      preferences.temperatureOffset -= 0.5;
     }
 
+    // Update temperature offset based on comfort bias
+    preferences.temperatureOffset = comfortBias;
     preferences.feedbackCount += 1;
 
     // Store updated preferences

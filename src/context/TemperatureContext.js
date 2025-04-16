@@ -3,21 +3,24 @@ import React, { createContext, useState, useContext } from 'react';
 const TemperatureContext = createContext();
 
 export const TemperatureProvider = ({ children }) => {
-  const [isCelsius, setIsCelsius] = useState(false);
+  const [temperatureUnit, setTemperatureUnit] = useState('C');
 
-  const toggleUnit = () => {
-    setIsCelsius(prev => !prev);
+  const toggleTemperatureUnit = (unit) => {
+    setTemperatureUnit(unit);
   };
 
-  const convertTemp = (fahrenheit) => {
-    if (isCelsius) {
-      return Math.round((fahrenheit - 32) * 5 / 9);
+  const convertTemp = (temp) => {
+    if (temperatureUnit === 'C') {
+      // If we're displaying in Celsius, return the temperature as is
+      return Math.round(temp);
+    } else {
+      // Convert Celsius to Fahrenheit
+      return Math.round((temp * 9/5) + 32);
     }
-    return fahrenheit;
   };
 
   return (
-    <TemperatureContext.Provider value={{ isCelsius, toggleUnit, convertTemp }}>
+    <TemperatureContext.Provider value={{ temperatureUnit, toggleTemperatureUnit, convertTemp }}>
       {children}
     </TemperatureContext.Provider>
   );
