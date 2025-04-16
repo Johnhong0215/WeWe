@@ -74,6 +74,12 @@ const getCachedWeather = async () => {
       return null;
     }
 
+    // Validate cached data format
+    if (!data?.current?.temperature || !data?.current?.feelsLike) {
+      await AsyncStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+
     return data;
   } catch (error) {
     console.error('[Weather API] Error reading from cache:', error);
@@ -93,6 +99,26 @@ const setCachedWeather = async (data) => {
   }
 };
 
+const transformWeatherData = (data) => {
+  // If data is already in our format, return it
+  if (data?.current?.temperature && data?.current?.feelsLike) {
+    return data;
+  }
+
+  // Transform WeatherAPI format to our format
+  return {
+    current: {
+      temperature: data.current.temp_c,
+      feelsLike: data.current.feelslike_c,
+      humidity: data.current.humidity,
+      windSpeed: data.current.wind_kph,
+      description: data.current.condition.text,
+      icon: mapWeatherIcon(data.current.condition.code),
+      uv: data.current.uv
+    }
+  };
+};
+
 export const getWeather = async () => {
   try {
     // Try to get cached data first
@@ -104,20 +130,33 @@ export const getWeather = async () => {
 
     // If no cached data or expired, fetch new data
     console.log('[Weather API] Fetching new data');
-    const response = await fetch('https://api.weatherapi.com/v1/current.json?key=YOUR_API_KEY&q=auto:ip');
-    const data = await response.json();
-
+    const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=auto:ip`);
+    
     if (!response.ok) {
-      throw new Error(data.error?.message || 'Failed to fetch weather data');
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Failed to fetch weather data');
     }
 
-    // Cache the new data
-    await setCachedWeather(data);
+    const apiData = await response.json();
+    console.log('[Weather API] Raw response:', apiData);
 
-    return data;
+    // Transform the data to our format
+    const transformedData = transformWeatherData(apiData);
+    console.log('[Weather API] Transformed data:', transformedData);
+
+    // Validate transformed data
+    if (!transformedData?.current?.temperature || !transformedData?.current?.feelsLike) {
+      throw new Error('Invalid weather data format received');
+    }
+
+    // Cache the transformed data
+    await setCachedWeather(transformedData);
+
+    return transformedData;
   } catch (error) {
     console.error('[Weather API] Error:', error);
-    throw error;
+    // Return mock data in case of error
+    return getMockWeather(0);
   }
 };
 

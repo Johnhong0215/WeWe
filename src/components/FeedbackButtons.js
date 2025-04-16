@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { getLastFeedback, getFeedbackMessage } from '../services/feedbackService';
+import { useTemperature } from '../context/TemperatureContext';
 
 const FeedbackButtons = ({ onFeedback }) => {
   const [lastFeedback, setLastFeedback] = useState(null);
   const [isChanging, setIsChanging] = useState(false);
+  const { updateComfortBias } = useTemperature();
 
   useEffect(() => {
     checkLastFeedback();
@@ -17,6 +19,7 @@ const FeedbackButtons = ({ onFeedback }) => {
   };
 
   const handleFeedback = async (type) => {
+    updateComfortBias(type);
     await onFeedback(type);
     checkLastFeedback();
   };

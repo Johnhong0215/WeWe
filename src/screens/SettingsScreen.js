@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getComfortBias } from '../services/feedbackService';
 import { useTemperature } from '../context/TemperatureContext';
+import { getRecommendation } from '../services/recommendationService';
 
 const SettingsScreen = () => {
   const [language, setLanguage] = useState('en');
   const [gender, setGender] = useState('male');
-  const [comfortBias, setComfortBias] = useState(0);
-  const { temperatureUnit, toggleTemperatureUnit } = useTemperature();
+  const { temperatureUnit, toggleTemperatureUnit, comfortBias, currentRecommendation, setCurrentRecommendation } = useTemperature();
 
   useEffect(() => {
     loadSettings();
-    loadComfortBias();
   }, []);
 
   const loadSettings = async () => {
@@ -26,15 +24,6 @@ const SettingsScreen = () => {
     }
   };
 
-  const loadComfortBias = async () => {
-    try {
-      const bias = await getComfortBias();
-      setComfortBias(bias);
-    } catch (error) {
-      console.error('Error loading comfort bias:', error);
-    }
-  };
-
   const saveLanguage = async (lang) => {
     try {
       await AsyncStorage.setItem('@language', lang);
@@ -44,10 +33,24 @@ const SettingsScreen = () => {
     }
   };
 
-  const saveGender = async (gen) => {
+  const saveGender = async (newGender) => {
     try {
-      await AsyncStorage.setItem('@gender', gen);
-      setGender(gen);
+      await AsyncStorage.setItem('@gender', newGender);
+      setGender(newGender);
+      
+      // If we have a current recommendation with weather data, update it
+      if (currentRecommendation?.weatherData) {
+        console.log('Updating recommendation with new gender:', newGender);
+        // Pass the new gender to getRecommendation
+        const newRecommendation = await getRecommendation({
+          ...currentRecommendation.weatherData,
+          gender: newGender
+        });
+        setCurrentRecommendation({
+          ...newRecommendation,
+          weatherData: currentRecommendation.weatherData
+        });
+      }
     } catch (error) {
       console.error('Error saving gender:', error);
     }
@@ -128,7 +131,7 @@ const SettingsScreen = () => {
           <Text style={styles.sectionTitle}>Comfort Level</Text>
           <View style={styles.comfortBiasContainer}>
             <Text style={styles.comfortBiasText}>
-              Current Bias: {comfortBias > 0 ? '+' : ''}{comfortBias}°C
+              Current Comfort Bias: {comfortBias > 0 ? '+' : ''}{comfortBias}°C
             </Text>
             <Text style={styles.comfortBiasDescription}>
               {comfortBias > 0 ? 'You prefer warmer temperatures' :

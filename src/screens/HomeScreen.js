@@ -5,21 +5,22 @@ import { getCurrentLocation } from '../services/locationService';
 import { getWeather } from '../services/weatherService';
 import { getRecommendation } from '../services/recommendationService';
 import { storeFeedback } from '../services/feedbackService';
+import { useTemperature } from '../context/TemperatureContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import WeatherInfo from '../components/WeatherInfo';
 import FeedbackButtons from '../components/FeedbackButtons';
 
 const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [weatherData, setWeatherData] = useState(null);
-  const [recommendation, setRecommendation] = useState(null);
   const [error, setError] = useState(null);
+  const { currentRecommendation, setCurrentRecommendation } = useTemperature();
 
   const loadWeatherData = async () => {
     try {
       setLoading(true);
       setError(null);
       setWeatherData(null);
-      setRecommendation(null);
 
       // Get current location
       const location = await getCurrentLocation();
@@ -33,14 +34,23 @@ const HomeScreen = () => {
         throw new Error('Invalid weather data received');
       }
 
-      // Set weather data first and wait for state to update
+      // Set weather data
       setWeatherData(weather);
 
-      // Get clothing recommendation
-      const clothingRecommendation = await getRecommendation(weather);
-      if (clothingRecommendation) {
-        setRecommendation(clothingRecommendation);
-      }
+      // Get current gender from AsyncStorage
+      const currentGender = await AsyncStorage.getItem('@gender') || 'male';
+
+      // Get clothing recommendation with current gender
+      const recommendation = await getRecommendation({
+        ...weather,
+        gender: currentGender
+      });
+      
+      // Store both recommendation and weather data
+      setCurrentRecommendation({
+        ...recommendation,
+        weatherData: weather
+      });
 
     } catch (err) {
       console.error('Error loading weather data:', err);
@@ -49,9 +59,8 @@ const HomeScreen = () => {
       } else {
         setError('Unable to load weather data. Please check your internet connection and try again.');
       }
-      // Reset states on error
       setWeatherData(null);
-      setRecommendation(null);
+      setCurrentRecommendation(null);
     } finally {
       setLoading(false);
     }
@@ -136,16 +145,16 @@ const HomeScreen = () => {
       <WeatherInfo weatherData={weatherData} />
 
       <View style={styles.recommendationContainer}>
-        {recommendation && (
+        {currentRecommendation && (
           <>
             <Text style={styles.recommendationText}>
-              {recommendation.recommendation}
+              {currentRecommendation.recommendation}
             </Text>
             
-            {recommendation.uvAdvisory.length > 0 && (
+            {currentRecommendation.uvAdvisory.length > 0 && (
               <View style={styles.uvAdvisoryContainer}>
                 <Text style={styles.uvAdvisoryTitle}>Sun Protection:</Text>
-                {recommendation.uvAdvisory.map((advice, index) => (
+                {currentRecommendation.uvAdvisory.map((advice, index) => (
                   <Text key={index} style={styles.uvAdvisoryText}>
                     • {advice}
                   </Text>
@@ -153,16 +162,16 @@ const HomeScreen = () => {
               </View>
             )}
 
-            {recommendation.temperatureShift?.hasShift && (
+            {currentRecommendation.temperatureShift?.hasShift && (
               <View style={styles.temperatureShiftContainer}>
                 <Text style={styles.temperatureShiftTitle}>
                   Temperature Change Alert:
                 </Text>
                 <Text style={styles.temperatureShiftText}>
-                  Temperature will change by {Math.abs(Math.round((recommendation.temperatureShift.futureTemp - recommendation.temperatureShift.currentTemp) * 5/9))}°C in {recommendation.temperatureShift.hoursAhead} hours.
+                  Temperature will change by {Math.abs(Math.round((currentRecommendation.temperatureShift.futureTemp - currentRecommendation.temperatureShift.currentTemp) * 5/9))}°C in {currentRecommendation.temperatureShift.hoursAhead} hours.
                 </Text>
                 <Text style={styles.futureRecommendationText}>
-                  Later: {recommendation.futureRecommendation}
+                  Later: {currentRecommendation.futureRecommendation}
                 </Text>
               </View>
             )}
@@ -172,10 +181,10 @@ const HomeScreen = () => {
 
       <View style={styles.comfortCategoryContainer}>
         <Text style={styles.comfortCategoryText}>
-          {recommendation?.adjustedFeelsLike !== undefined && 
-            (recommendation.adjustedFeelsLike - recommendation.originalFeelsLike > 3
+          {currentRecommendation?.adjustedFeelsLike !== undefined && 
+            (currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike > 3
               ? "You tend to get cold easily"
-              : recommendation.adjustedFeelsLike - recommendation.originalFeelsLike < -3
+              : currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike < -3
               ? "You tend to feel warm more quickly"
               : "Your comfort level is typical")}
         </Text>
