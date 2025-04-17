@@ -1,94 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getPreferences } from './feedbackService';
 
-// Base layer recommendation (kept for potential additional features)
-const getBaseLayer = async (temperature) => {
-  const preferences = await getPreferences();
-  if (preferences) {
-    temperature += preferences.temperatureOffset;
-  }
-  if (temperature < 40) {
-    return 'a thermal base layer';
-  } else if (temperature < 60) {
-    return 'a long-sleeve shirt';
-  } else if (temperature < 75) {
-    return 'a t-shirt';
-  } else {
-    return 'a light, breathable t-shirt';
-  }
-};
+const TEMPERATURE_CATEGORIES = [
+  { min: -Infinity, max: -10, label: 'Super Cold' },
+  { min: -9, max: -1, label: 'Very Cold' },
+  { min: 0, max: 4, label: 'Cold' },
+  { min: 5, max: 9, label: 'Chilly' },
+  { min: 10, max: 14, label: 'Cool' },
+  { min: 15, max: 19, label: 'Mild' },
+  { min: 20, max: 24, label: 'Warm' },
+  { min: 25, max: 29, label: 'Hot' },
+  { min: 30, max: 34, label: 'Very Hot' },
+  { min: 35, max: Infinity, label: 'Super Hot' }
+];
 
-// Outer layer recommendation (kept for potential additional features)
-const getOuterLayer = async (temperature, precipitation) => {
-  const preferences = await getPreferences();
-  if (preferences) {
-    temperature += preferences.temperatureOffset;
-  }
-  if (temperature < 0) {
-    return 'a heavy winter coat';
-  } else if (temperature < 7) {
-    return 'a warm winter jacket';
-  } else if (temperature < 15) {
-    return 'a light jacket';
-  } else if (temperature < 21 || precipitation) {
-    return 'a light windbreaker';
-  }
-  return null;
-};
-
-// Bottoms recommendation (kept for potential additional features)
-const getBottoms = async (temperature) => {
-  const preferences = await getPreferences();
-  if (preferences) {
-    temperature += preferences.temperatureOffset;
-  }
-  if (temperature < 40) {
-    return 'warm pants or thermal leggings';
-  } else if (temperature < 60) {
-    return 'long pants';
-  } else if (temperature < 75) {
-    return 'light pants or long shorts';
-  } else {
-    return 'shorts';
-  }
-};
-
-// Accessories recommendation (kept for potential additional features)
-const getAccessories = async (temperature, windSpeed, precipitation) => {
-  const preferences = await getPreferences();
-  if (preferences) {
-    temperature += preferences.temperatureOffset;
-  }
-  const accessories = [];
-  if (temperature < 7) {
-    accessories.push('a warm hat', 'gloves', 'a scarf');
-  } else if (temperature < 13 && windSpeed > 10) {
-    accessories.push('a light hat');
-  }
-  if (precipitation) {
-    accessories.push('an umbrella');
-  }
-  if (temperature > 24) {
-    accessories.push('a sun hat or cap', 'sunglasses');
-  }
-  return accessories;
-};
-
-// Temperature categories based on the adjusted "feels like" temperature
-const TEMPERATURE_CATEGORIES = {
-  SUPER_COLD: { min: -Infinity, max: -10, label: 'Super Cold' },
-  VERY_COLD: { min: -9, max: -1, label: 'Very Cold' },
-  COLD: { min: 0, max: 4, label: 'Cold' },
-  CHILLY: { min: 5, max: 9, label: 'Chilly' },
-  COOL: { min: 10, max: 14, label: 'Cool' },
-  MILD: { min: 15, max: 18, label: 'Mild' },
-  WARM: { min: 19, max: 23, label: 'Warm' },
-  HOT: { min: 24, max: 28, label: 'Hot' },
-  VERY_HOT: { min: 29, max: 33, label: 'Very Hot' },
-  SUPER_HOT: { min: 34, max: Infinity, label: 'Super Hot' }
-};
-
-// Outfit options for each level (1-10) and for each gender
 const OUTFIT_OPTIONS = {
   "1": {
     male: [
@@ -140,14 +65,14 @@ const OUTFIT_OPTIONS = {
   },
   "5": {
     male: [
-      "Long sleeve T-shirt, jeans",
-      "Windbreaker over tee, joggers",
-      "Lightweight jacket, polo shirt, chinos"
+      "Light jacket, sweater, jeans",
+      "Fleece jacket, long-sleeve shirt, chinos",
+      "Light coat, hoodie, trousers"
     ],
     female: [
-      "Denim jacket, dress",
-      "T-shirt and midi skirt",
-      "Long-sleeve top and jeans"
+      "Light jacket, sweater, jeans",
+      "Cardigan, long-sleeve top, pants",
+      "Light coat, blouse, trousers"
     ]
   },
   "6": {
@@ -212,129 +137,73 @@ const OUTFIT_OPTIONS = {
   }
 };
 
-// Helper function: Convert category name to a numeric level (1-10)
-const categoryToLevel = (category) => {
-  const categories = Object.keys(TEMPERATURE_CATEGORIES);
-  return categories.indexOf(category) + 1;
-};
-
-// Helper function: Lookup base category based on adjusted temperature
 const getCategoryFromTemp = (temp) => {
-  for (const [category, range] of Object.entries(TEMPERATURE_CATEGORIES)) {
-    if (temp >= range.min && temp <= range.max) {
-      return category;
-    }
-  }
-  return 'SUPER_COLD';
+  return TEMPERATURE_CATEGORIES.find(cat => temp >= cat.min && temp <= cat.max);
 };
 
-// UV Index scale and recommendations
-const UV_LEVELS = {
-  LOW: { min: 0, max: 2, label: 'Low', recommendations: [] },
-  MODERATE: { min: 3, max: 5, label: 'Moderate', recommendations: ['Consider wearing a hat'] },
-  HIGH: { min: 6, max: 7, label: 'High', recommendations: ['Wear a hat', 'Use sunscreen', 'Wear sunglasses'] },
-  VERY_HIGH: { min: 8, max: 10, label: 'Very High', recommendations: ['Wear a hat', 'Use sunscreen SPF 30+', 'Wear sunglasses', 'Seek shade during midday'] },
-  EXTREME: { min: 11, max: Infinity, label: 'Extreme', recommendations: ['Wear a hat', 'Use sunscreen SPF 50+', 'Wear sunglasses', 'Seek shade during midday', 'Limit time in direct sun'] }
-};
+const classifyTemperature = (feelsLikeC, wind = 0, humidity = 0, comfortBias = 0) => {
+  const adjusted = feelsLikeC - comfortBias;
 
-// Returns UV advisory recommendations based on UV index
-const getUVAdvisory = (uv) => {
-  for (const [level, range] of Object.entries(UV_LEVELS)) {
-    if (uv >= range.min && uv <= range.max) {
-      return {
-        level: level,
-        label: range.label,
-        recommendations: range.recommendations
-      };
-    }
-  }
-  return {
-    level: 'LOW',
-    label: 'Low',
-    recommendations: []
-  };
-};
+  // Find correct category
+  const categoryIndex = TEMPERATURE_CATEGORIES.findIndex(c => adjusted >= c.min && adjusted <= c.max);
+  
+  // Fallback to index 4 (Chilly) if something went wrong
+  let level = categoryIndex >= 0 ? categoryIndex + 1 : 5;
 
-// Classify temperature with adjustments following the specified logic:
-// 1. adjustedFeelsLike = feelsLikeC - userComfortBias
-// 2. baseCategory = lookup_category(adjustedFeelsLike)
-// 3. If wind > 15 km/h AND category level ≤ 6 → level -= 1
-// 4. If humidity > 80% AND adjustedFeelsLike > 25°C → level += 1
-// 5. Return UV advisory based on UV index
-export function classifyTemperature(feelsLikeC, wind = 0, humidity = 0, uv = 0, userComfortBias = 0) {
-  let adjustedFeelsLike = feelsLikeC - userComfortBias;
-  let baseCategory = getCategoryFromTemp(adjustedFeelsLike);
-  let level = categoryToLevel(baseCategory);
-  
-  // Wind chill adjustment: if wind > 15 km/h and level is 6 or lower, lower one level
-  if (wind > 15 && level <= 6) {
-    level -= 1;
-  }
-  
-  // Humidity adjustment: if humidity > 80% and adjustedFeelsLike > 25°C, raise one level
-  if (humidity > 80 && adjustedFeelsLike > 25) {
-    level += 1;
-  }
-  
-  // Ensure the level is between 1 and 10
+  // Wind chill: drop level
+  if (wind > 15 && level <= 6) level -= 1;
+
+  // Humidity heat index bump
+  if (humidity > 80 && adjusted > 25) level += 1;
+
+  // Clamp between 1 and 10
   level = Math.max(1, Math.min(10, level));
-  const finalCategory = Object.keys(TEMPERATURE_CATEGORIES)[level - 1];
-  
+
   return {
     level,
-    category: finalCategory,
-    adjustedFeelsLike,
-    uvAdvisory: getUVAdvisory(uv),
+    category: TEMPERATURE_CATEGORIES[level - 1].label,
+    adjustedFeelsLike: adjusted,
     originalFeelsLike: feelsLikeC
   };
-}
+};
 
-// Get an outfit recommendation for the provided level and gender,
-// ensuring the recommendation strictly suits the gender from settings.
-export function getOutfitRecommendation(level, gender) {
-  // Use the OUTFIT_OPTIONS object with level and gender key
-  const options = OUTFIT_OPTIONS[level]?.[gender];
-  if (!options) return "No recommendation available.";
-  const idx = Math.floor(Math.random() * options.length);
-  return options[idx];
-}
+const getOutfitRecommendation = (level, gender) => {
+  const levelStr = level.toString();
+  const validGender = ['male', 'female'].includes(gender) ? gender : 'male';
+  const options = OUTFIT_OPTIONS[levelStr]?.[validGender] || [];
+  if (!options.length) return 'No outfit recommendation available';
+  return options[Math.floor(Math.random() * options.length)];
+};
 
-// Main recommendation function
 export const getRecommendation = async (weatherData) => {
   try {
     if (!weatherData?.current?.feelsLike) {
-      throw new Error('Invalid weather data for recommendation');
+      throw new Error('Invalid weather data');
     }
 
-    // Retrieve user preferences and comfort bias
-    const preferences = await getPreferences();
-    const userComfortBias = preferences?.temperatureOffset || 0;
-
-    // Retrieve gender from settings stored under the key '@gender'
+    const prefs = await getPreferences();
     const gender = await AsyncStorage.getItem('@gender') || 'male';
+    const comfortBias = prefs?.temperatureOffset || 0;
 
-    // Retrieve weather parameters (assuming temperature in Celsius)
-    const feelsLikeC = weatherData.current.feelsLike;
-    const wind = weatherData.current.windSpeed || 0;
-    const humidity = weatherData.current.humidity || 0;
-    const uv = weatherData.current.uv || 0;
+    const { feelsLike, windSpeed, humidity } = weatherData.current;
+    const { level, category, adjustedFeelsLike, originalFeelsLike } = classifyTemperature(
+      feelsLike,
+      windSpeed || 0,
+      humidity || 0,
+      comfortBias
+    );
 
-    // Classify temperature according to the specified logic
-    const classification = classifyTemperature(feelsLikeC, wind, humidity, uv, userComfortBias);
+    const recommendation = getOutfitRecommendation(level, gender);
 
-    // Get an outfit recommendation based on the computed level and selected gender
-    const recommendation = getOutfitRecommendation(classification.level, gender);
-
-    // Prepare the final response, including UV advisory if applicable
     return {
       recommendation,
-      category: classification.category,
-      adjustedFeelsLike: classification.adjustedFeelsLike,
-      originalFeelsLike: classification.originalFeelsLike,
-      uvAdvisory: classification.uvAdvisory
+      category,
+      adjustedFeelsLike,
+      originalFeelsLike,
+      gender
     };
-  } catch (error) {
-    console.error('Error getting recommendation:', error);
-    throw error;
+  } catch (err) {
+    console.error('Recommendation error:', err);
+    throw err;
   }
 };

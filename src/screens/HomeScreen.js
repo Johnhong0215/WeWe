@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ScrollView, View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentLocation } from '../services/locationService';
 import { getWeather } from '../services/weatherService';
@@ -12,15 +12,36 @@ import FeedbackButtons from '../components/FeedbackButtons';
 
 const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [weatherData, setWeatherData] = useState(null);
   const [error, setError] = useState(null);
   const { currentRecommendation, setCurrentRecommendation } = useTemperature();
 
-  const loadWeatherData = async () => {
+  const clearCache = async () => {
     try {
-      setLoading(true);
+      // Clear weather data cache
+      await AsyncStorage.removeItem('@weatherData');
+      // Clear location cache
+      await AsyncStorage.removeItem('@location');
+      // Clear recommendation cache
+      await AsyncStorage.removeItem('@recommendation');
+    } catch (err) {
+      console.error('Error clearing cache:', err);
+    }
+  };
+
+  const loadWeatherData = async (isRefreshing = false) => {
+    try {
+      if (!isRefreshing) {
+        setLoading(true);
+      }
       setError(null);
       setWeatherData(null);
+
+      // Clear cache if refreshing
+      if (isRefreshing) {
+        await clearCache();
+      }
 
       // Get current location
       const location = await getCurrentLocation();
@@ -28,8 +49,8 @@ const HomeScreen = () => {
         throw new Error('Invalid location data');
       }
       
-      // Get weather data
-      const weather = await getWeather(location.latitude, location.longitude);
+      // Get weather data with forceRefresh parameter
+      const weather = await getWeather(location.latitude, location.longitude, isRefreshing);
       if (!weather?.current?.temperature) {
         throw new Error('Invalid weather data received');
       }
@@ -63,12 +84,18 @@ const HomeScreen = () => {
       setCurrentRecommendation(null);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   // Load weather data on component mount
   useEffect(() => {
     loadWeatherData();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadWeatherData(true);
   }, []);
 
   const handleRetry = () => {
@@ -104,7 +131,7 @@ const HomeScreen = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -124,7 +151,6 @@ const HomeScreen = () => {
     );
   }
 
-  // Only render the main content if we have valid weather data
   if (!weatherData || !weatherData.current) {
     return (
       <View style={styles.centerContainer}>
@@ -138,61 +164,64 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>WeatherWear</Text>
-      </View>
+      <ScrollView 
+        style={styles.scrollView} 
+        bounces={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+            title="Pull to refresh"
+            titleColor="#666"
+          />
+        }
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>WeatherWear</Text>
+        </View>
 
-      <WeatherInfo weatherData={weatherData} />
+        <WeatherInfo weatherData={weatherData} />
 
-      <View style={styles.recommendationContainer}>
-        {currentRecommendation && (
-          <>
-            <Text style={styles.recommendationText}>
-              {currentRecommendation.recommendation}
-            </Text>
-            
-            {currentRecommendation.uvAdvisory.length > 0 && (
-              <View style={styles.uvAdvisoryContainer}>
-                <Text style={styles.uvAdvisoryTitle}>Sun Protection:</Text>
-                {currentRecommendation.uvAdvisory.map((advice, index) => (
-                  <Text key={index} style={styles.uvAdvisoryText}>
-                    • {advice}
+        <View style={styles.recommendationContainer}>
+          {currentRecommendation && (
+            <>
+              <Text style={styles.recommendationText}>
+                {currentRecommendation.recommendation}
+              </Text>
+              
+              {currentRecommendation.temperatureShift?.hasShift && (
+                <View style={styles.temperatureShiftContainer}>
+                  <Text style={styles.temperatureShiftTitle}>
+                    Temperature Change Alert:
                   </Text>
-                ))}
-              </View>
-            )}
+                  <Text style={styles.temperatureShiftText}>
+                    Temperature will change by {Math.abs(Math.round((currentRecommendation.temperatureShift.futureTemp - currentRecommendation.temperatureShift.currentTemp) * 5/9))}°C in {currentRecommendation.temperatureShift.hoursAhead} hours.
+                  </Text>
+                  <Text style={styles.futureRecommendationText}>
+                    Later: {currentRecommendation.futureRecommendation}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
 
-            {currentRecommendation.temperatureShift?.hasShift && (
-              <View style={styles.temperatureShiftContainer}>
-                <Text style={styles.temperatureShiftTitle}>
-                  Temperature Change Alert:
-                </Text>
-                <Text style={styles.temperatureShiftText}>
-                  Temperature will change by {Math.abs(Math.round((currentRecommendation.temperatureShift.futureTemp - currentRecommendation.temperatureShift.currentTemp) * 5/9))}°C in {currentRecommendation.temperatureShift.hoursAhead} hours.
-                </Text>
-                <Text style={styles.futureRecommendationText}>
-                  Later: {currentRecommendation.futureRecommendation}
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-      </View>
+        <View style={styles.comfortCategoryContainer}>
+          <Text style={styles.comfortCategoryText}>
+            {currentRecommendation?.adjustedFeelsLike !== undefined && 
+              (currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike > 3
+                ? "You tend to get cold easily"
+                : currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike < -3
+                ? "You tend to feel warm more quickly"
+                : "Your comfort level is typical")}
+          </Text>
+        </View>
 
-      <View style={styles.comfortCategoryContainer}>
-        <Text style={styles.comfortCategoryText}>
-          {currentRecommendation?.adjustedFeelsLike !== undefined && 
-            (currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike > 3
-              ? "You tend to get cold easily"
-              : currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike < -3
-              ? "You tend to feel warm more quickly"
-              : "Your comfort level is typical")}
-        </Text>
-      </View>
-
-      <View style={styles.feedbackContainer}>
-        <FeedbackButtons onFeedback={handleFeedback} />
-      </View>
+        <View style={styles.feedbackContainer}>
+          <FeedbackButtons onFeedback={handleFeedback} />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -263,23 +292,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  uvAdvisoryContainer: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-  },
-  uvAdvisoryTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFA500',
-    marginBottom: 5,
-  },
-  uvAdvisoryText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 10,
-  },
   temperatureShiftContainer: {
     marginTop: 15,
     padding: 10,
@@ -318,6 +330,9 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  scrollView: {
+    flex: 1,
   },
 });
 

@@ -80,6 +80,10 @@ const getCachedWeather = async () => {
       return null;
     }
 
+    // Log the timestamp of the cached data
+    const cachedDate = new Date(timestamp);
+    console.log(`[Weather API] Using cached data from ${cachedDate.toLocaleString()}`);
+
     return data;
   } catch (error) {
     console.error('[Weather API] Error reading from cache:', error);
@@ -119,18 +123,22 @@ const transformWeatherData = (data) => {
   };
 };
 
-export const getWeather = async () => {
+export const getWeather = async (latitude, longitude, forceRefresh = false) => {
   try {
+    // If forceRefresh is true, remove cached data
+    if (forceRefresh) {
+      await AsyncStorage.removeItem(CACHE_KEY);
+    }
+
     // Try to get cached data first
     const cachedData = await getCachedWeather();
     if (cachedData) {
-      console.log('[Weather API] Using cached data');
       return cachedData;
     }
 
     // If no cached data or expired, fetch new data
     console.log('[Weather API] Fetching new data');
-    const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=auto:ip`);
+    const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${latitude},${longitude}`);
     
     if (!response.ok) {
       const errorData = await response.json();
@@ -156,7 +164,7 @@ export const getWeather = async () => {
   } catch (error) {
     console.error('[Weather API] Error:', error);
     // Return mock data in case of error
-    return getMockWeather(0);
+    return getMockWeather(latitude);
   }
 };
 

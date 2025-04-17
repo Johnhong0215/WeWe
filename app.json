@@ -31,7 +31,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow WeatherWear to use your location to provide accurate weather-based clothing recommendations."
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }

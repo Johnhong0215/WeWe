@@ -41,14 +41,17 @@ const SettingsScreen = () => {
       // If we have a current recommendation with weather data, update it
       if (currentRecommendation?.weatherData) {
         console.log('Updating recommendation with new gender:', newGender);
-        // Pass the new gender to getRecommendation
+        // Get a new recommendation with the updated gender
         const newRecommendation = await getRecommendation({
           ...currentRecommendation.weatherData,
           gender: newGender
         });
+        
+        // Update the current recommendation while preserving weather data
         setCurrentRecommendation({
           ...newRecommendation,
-          weatherData: currentRecommendation.weatherData
+          weatherData: currentRecommendation.weatherData,
+          gender: newGender // Explicitly set the gender
         });
       }
     } catch (error) {
