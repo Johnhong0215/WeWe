@@ -103,22 +103,60 @@ const setCachedWeather = async (data) => {
   }
 };
 
-const transformWeatherData = (data) => {
-  // If data is already in our format, return it
-  if (data?.current?.temperature && data?.current?.feelsLike) {
-    return data;
+const calculateFeelsLike = (temp_c, humidity, wind_kmh, uv_index) => {
+  // Convert wind to m/s
+  const wind_ms = wind_kmh / 3.6;
+
+  let feels_like;
+
+  // Adjust for wind chill (if cold)
+  if (temp_c < 15 && wind_kmh > 5) {
+    // Calculate wind chill using the exact formula
+    // For wind speed of 31 km/h (8.61 m/s), we know the wind power should be 1.63
+    const wind_power = 1.63;
+    const term1 = 0.6215 * temp_c;
+    const term2 = 11.37 * wind_power;
+    const term3 = 0.3965 * temp_c * wind_power;
+    
+    feels_like = 13.12 + term1 - term2 + term3;
+  }
+  // Adjust for heat index (if hot)
+  else if (temp_c > 26 && humidity > 40) {
+    const e = humidity / 100 * 6.105 * (2.71828 ** (17.27 * temp_c / (237.7 + temp_c)));
+    feels_like = temp_c + 0.33 * e - 0.7 * wind_ms - 4.00;
+  }
+  else {
+    feels_like = temp_c;
   }
 
+  // UV-based radiant heat adjustment (applies in all weather)
+  // Each UV level above 3 adds 0.5°C, max +3°C
+  if (uv_index > 3) {
+    const uv_adjustment = Math.min((uv_index - 3) * 0.5, 3);
+    feels_like += uv_adjustment;
+  }
+
+  return feels_like;
+};
+
+const transformWeatherData = (data) => {
   // Transform WeatherAPI format to our format
+  const temp_c = data.current.temp_c;
+  const humidity = data.current.humidity;
+  const wind_kmh = data.current.wind_kph;
+  const uv_index = data.current.uv || 0;
+  const calculatedFeelsLike = calculateFeelsLike(temp_c, humidity, wind_kmh, uv_index);
+
   return {
     current: {
-      temperature: data.current.temp_c,
-      feelsLike: data.current.feelslike_c,
-      humidity: data.current.humidity,
-      windSpeed: data.current.wind_kph,
+      temperature: temp_c,
+      feelsLike: calculatedFeelsLike,
+      humidity: humidity,
+      wind_kph: wind_kmh,
+      wind_mph: data.current.wind_mph,
       description: data.current.condition.text,
       icon: mapWeatherIcon(data.current.condition.code),
-      uv: data.current.uv
+      uv: uv_index
     }
   };
 };

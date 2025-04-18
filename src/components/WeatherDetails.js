@@ -12,11 +12,10 @@ const WeatherDetails = ({ weatherData }) => {
   const { current } = weatherData;
 
   const getWindSpeed = () => {
-    const speedMph = current.windSpeed || 0;
     if (temperatureUnit === 'C') {
-      return `${(speedMph * 1.60934).toFixed(1)} km/h`;
+      return `${current.wind_kph} km/h`;
     }
-    return `${speedMph.toFixed(1)} mph`;
+    return `${current.wind_mph} mph`;
   };
 
   return (

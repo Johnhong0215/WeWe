@@ -126,11 +126,18 @@ export const TemperatureProvider = ({ children }) => {
   const convertTemp = (temp) => {
     if (temperatureUnit === 'C') {
       // If we're displaying in Celsius, return the temperature as is
-      return Math.round(temp);
+      return temp;
     } else {
       // Convert Celsius to Fahrenheit
       return Math.round((temp * 9/5) + 32);
     }
+  };
+
+  const isFeedbackAvailable = () => {
+    if (!lastFeedbackTime) return true;
+    const currentTime = Date.now();
+    const twoHoursInMs = 2 * 60 * 60 * 1000;
+    return currentTime - lastFeedbackTime >= twoHoursInMs;
   };
 
   return (
@@ -143,7 +150,8 @@ export const TemperatureProvider = ({ children }) => {
       lastFeedback,
       lastFeedbackTime,
       currentRecommendation,
-      setCurrentRecommendation
+      setCurrentRecommendation,
+      isFeedbackAvailable
     }}>
       {children}
     </TemperatureContext.Provider>

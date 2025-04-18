@@ -5,6 +5,7 @@ const WeatherAnimation = ({ gender = 'male' }) => {
   return (
     <View style={styles.container}>
       <Image
+        key={gender}
         source={gender === 'female' ? require('../../assets/animation/female.gif') : require('../../assets/animation/male.gif')}
         style={styles.image}
         resizeMode="contain"

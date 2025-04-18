@@ -18,13 +18,28 @@ const WeatherSummary = ({ weatherData }) => {
     return Math.round(temp);
   };
 
+  const getDescription = () => {
+    let description = current.description || 'No description available';
+    
+    // Check if it's windy (threshold: 20 km/h or 12.4 mph)
+    const isWindy = temperatureUnit === 'C' 
+      ? current.wind_kph > 20 
+      : current.wind_mph > 12.4;
+
+    if (isWindy) {
+      description += ', windy';
+    }
+
+    return description;
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.temperature}>
         {formatTemperature(convertTemp(current.temperature))}°{temperatureUnit}
       </Text>
       <Text style={styles.description}>
-        {current.description || 'No description available'}
+        {getDescription()}
       </Text>
       <Text style={styles.feelsLike}>
         Feels like: {formatTemperature(convertTemp(current.feelsLike))}°{temperatureUnit}
