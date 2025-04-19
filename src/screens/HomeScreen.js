@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentLocation } from '../services/locationService';
 import { getWeather } from '../services/weatherService';
 import { getRecommendation } from '../services/recommendationService';
-import { storeFeedback } from '../services/feedbackService';
+import { storeFeedback, storeFeedbackWithWeather } from '../services/feedbackService';
 import { useTemperature } from '../context/TemperatureContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WeatherInfo from '../components/WeatherInfo';
@@ -15,7 +15,7 @@ const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [weatherData, setWeatherData] = useState(null);
   const [error, setError] = useState(null);
-  const { currentRecommendation, setCurrentRecommendation } = useTemperature();
+  const { currentRecommendation, setCurrentRecommendation, updateFeedbackHistory } = useTemperature();
 
   const clearCache = async () => {
     try {
@@ -106,6 +106,24 @@ const HomeScreen = () => {
     try {
       if (!weatherData || !weatherData.current) return;
 
+      // Create feedback entry
+      const feedbackEntry = {
+        timestamp: new Date().toISOString(),
+        feedback,
+        weather: {
+          temperature: weatherData.current.temperature,
+          feelsLike: weatherData.current.feelsLike,
+          humidity: weatherData.current.humidity,
+          wind_kph: weatherData.current.wind_kph,
+          uv: weatherData.current.uv,
+          description: weatherData.current.description
+        }
+      };
+
+      // Update feedback history through context
+      await updateFeedbackHistory(feedbackEntry);
+
+      // Store the feedback for comfort bias calculation
       const success = await storeFeedback(weatherData, feedback);
       
       if (success) {

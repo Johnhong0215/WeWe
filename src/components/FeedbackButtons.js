@@ -6,7 +6,7 @@ import { useTemperature } from '../context/TemperatureContext';
 const FeedbackButtons = ({ onFeedback }) => {
   const [lastFeedback, setLastFeedback] = useState(null);
   const [isChanging, setIsChanging] = useState(false);
-  const { updateComfortBias } = useTemperature();
+  const { updateComfortBias, isFeedbackAvailable } = useTemperature();
 
   useEffect(() => {
     checkLastFeedback();
@@ -54,18 +54,20 @@ const FeedbackButtons = ({ onFeedback }) => {
       <Text style={styles.feedbackMessage}>
         {getFeedbackMessage(lastFeedback.type)}
       </Text>
-      <TouchableOpacity 
-        style={styles.changeButton}
-        onPress={() => setIsChanging(true)}
-      >
-        <Text style={styles.changeButtonText}>Change Response</Text>
-      </TouchableOpacity>
+      {!isFeedbackAvailable() && (
+        <TouchableOpacity 
+          style={styles.changeButton}
+          onPress={() => setIsChanging(true)}
+        >
+          <Text style={styles.changeButtonText}>Change Response</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {(isChanging || !lastFeedback) ? renderFeedbackButtons() : renderFeedbackMessage()}
+      {(isChanging || !lastFeedback || isFeedbackAvailable()) ? renderFeedbackButtons() : renderFeedbackMessage()}
     </View>
   );
 };

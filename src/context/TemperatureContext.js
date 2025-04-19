@@ -12,10 +12,12 @@ export const TemperatureProvider = ({ children }) => {
   const [lastFeedback, setLastFeedback] = useState(null);
   const [lastFeedbackTime, setLastFeedbackTime] = useState(null);
   const [currentRecommendation, setCurrentRecommendation] = useState(null);
+  const [feedbackHistory, setFeedbackHistory] = useState([]);
 
   useEffect(() => {
     loadComfortBias();
     loadLastFeedback();
+    loadFeedbackHistory();
   }, []);
 
   const loadComfortBias = async () => {
@@ -46,6 +48,17 @@ export const TemperatureProvider = ({ children }) => {
     }
   };
 
+  const loadFeedbackHistory = async () => {
+    try {
+      const history = await AsyncStorage.getItem('@feedback_history');
+      if (history) {
+        setFeedbackHistory(JSON.parse(history));
+      }
+    } catch (error) {
+      console.error('Error loading feedback history:', error);
+    }
+  };
+
   const saveComfortBias = async (newBias) => {
     try {
       const biasToSave = parseFloat(newBias);
@@ -67,6 +80,39 @@ export const TemperatureProvider = ({ children }) => {
       setLastFeedbackTime(currentTime);
     } catch (error) {
       console.error('Error saving last feedback:', error);
+    }
+  };
+
+  const updateFeedbackHistory = async (newFeedback) => {
+    try {
+      const history = await AsyncStorage.getItem('@feedback_history');
+      const feedbackHistory = history ? JSON.parse(history) : [];
+      
+      // Get the most recent feedback if it exists
+      const mostRecentFeedback = feedbackHistory[0];
+      const twoHoursInMs = 2 * 60 * 60 * 1000;
+      const currentTime = new Date().getTime();
+      
+      if (mostRecentFeedback) {
+        const lastFeedbackTime = new Date(mostRecentFeedback.timestamp).getTime();
+        const timeSinceLastFeedback = currentTime - lastFeedbackTime;
+
+        if (timeSinceLastFeedback < twoHoursInMs) {
+          // Within 2 hours, update the existing feedback
+          feedbackHistory[0] = newFeedback;
+        } else {
+          // After 2 hours, add as new entry
+          feedbackHistory.unshift(newFeedback);
+        }
+      } else {
+        // No previous feedback, add as new entry
+        feedbackHistory.unshift(newFeedback);
+      }
+      
+      await AsyncStorage.setItem('@feedback_history', JSON.stringify(feedbackHistory));
+      setFeedbackHistory(feedbackHistory);
+    } catch (error) {
+      console.error('Error updating feedback history:', error);
     }
   };
 
@@ -126,10 +172,10 @@ export const TemperatureProvider = ({ children }) => {
   const convertTemp = (temp) => {
     if (temperatureUnit === 'C') {
       // If we're displaying in Celsius, return the temperature as is
-      return temp;
+      return parseFloat(temp);
     } else {
       // Convert Celsius to Fahrenheit
-      return Math.round((temp * 9/5) + 32);
+      return parseFloat((temp * 9/5) + 32);
     }
   };
 
@@ -151,7 +197,10 @@ export const TemperatureProvider = ({ children }) => {
       lastFeedbackTime,
       currentRecommendation,
       setCurrentRecommendation,
-      isFeedbackAvailable
+      isFeedbackAvailable,
+      feedbackHistory,
+      updateFeedbackHistory,
+      loadFeedbackHistory
     }}>
       {children}
     </TemperatureContext.Provider>

@@ -4,6 +4,7 @@ const FEEDBACK_KEY = '@weatherwear_feedback';
 const PREFERENCES_KEY = '@weatherwear_preferences';
 const LAST_FEEDBACK_KEY = '@weatherwear_last_feedback';
 const COMFORT_BIAS_KEY = '@weatherwear_comfort_bias';
+const FEEDBACK_HISTORY_KEY = '@weatherwear_feedback_history';
 
 // Structure to store feedback with weather conditions
 const createFeedbackEntry = (weatherData, feedback) => ({
@@ -116,8 +117,8 @@ export const getFeedbackMessage = (feedbackType) => {
 
 export const getFeedbackHistory = async () => {
   try {
-    const feedbackString = await AsyncStorage.getItem(FEEDBACK_KEY);
-    return feedbackString ? JSON.parse(feedbackString) : [];
+    const feedback = await AsyncStorage.getItem(FEEDBACK_HISTORY_KEY);
+    return feedback ? JSON.parse(feedback) : [];
   } catch (error) {
     console.error('Error getting feedback history:', error);
     return [];
@@ -164,5 +165,41 @@ export const getPreferences = async () => {
   } catch (error) {
     console.error('Error getting preferences:', error);
     return null;
+  }
+};
+
+export const storeFeedbackWithWeather = async (feedback, weatherData) => {
+  try {
+    const feedbackEntry = {
+      timestamp: new Date().toISOString(),
+      feedback,
+      weather: {
+        temperature: weatherData.current.temperature,
+        feelsLike: weatherData.current.feelsLike,
+        humidity: weatherData.current.humidity,
+        wind_kph: weatherData.current.wind_kph,
+        uv: weatherData.current.uv,
+        description: weatherData.current.description
+      }
+    };
+
+    const existingFeedback = await getFeedbackHistory();
+    const updatedFeedback = [feedbackEntry, ...existingFeedback];
+    
+    await AsyncStorage.setItem(FEEDBACK_HISTORY_KEY, JSON.stringify(updatedFeedback));
+    return true;
+  } catch (error) {
+    console.error('Error storing feedback with weather:', error);
+    return false;
+  }
+};
+
+export const clearFeedbackHistory = async () => {
+  try {
+    await AsyncStorage.removeItem(FEEDBACK_HISTORY_KEY);
+    return true;
+  } catch (error) {
+    console.error('Error clearing feedback history:', error);
+    return false;
   }
 }; 

@@ -1,17 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTemperature } from '../context/TemperatureContext';
 import { getRecommendation } from '../services/recommendationService';
+import { getFeedbackHistory, clearFeedbackHistory } from '../services/feedbackService';
 
 const SettingsScreen = () => {
   const [language, setLanguage] = useState('en');
   const [gender, setGender] = useState('male');
-  const { temperatureUnit, toggleTemperatureUnit, comfortBias, currentRecommendation, setCurrentRecommendation } = useTemperature();
+  const { temperatureUnit, toggleTemperatureUnit, comfortBias, currentRecommendation, setCurrentRecommendation, feedbackHistory, loadFeedbackHistory, convertTemp } = useTemperature();
 
   useEffect(() => {
     loadSettings();
+    loadFeedbackHistory();
   }, []);
+
+  const handleClearHistory = async () => {
+    try {
+      await AsyncStorage.removeItem('@feedback_history');
+      loadFeedbackHistory();
+    } catch (error) {
+      console.error('Error clearing feedback history:', error);
+    }
+  };
+
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleString();
+  };
 
   const loadSettings = async () => {
     try {
@@ -59,9 +75,13 @@ const SettingsScreen = () => {
     }
   };
 
+  const isWindy = (wind_kph) => {
+    return temperatureUnit === 'C' ? wind_kph > 20 : wind_kph > 12.4;
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         <Text style={styles.header}>Settings</Text>
 
         <View style={styles.section}>
@@ -143,7 +163,53 @@ const SettingsScreen = () => {
             </Text>
           </View>
         </View>
-      </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Feedback History</Text>
+            {feedbackHistory.length > 0 && (
+              <TouchableOpacity onPress={handleClearHistory}>
+                <Text style={styles.clearButton}>Clear History</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {feedbackHistory.length === 0 ? (
+            <Text style={styles.emptyText}>No feedback history yet</Text>
+          ) : (
+            feedbackHistory.map((entry, index) => (
+              <View key={index} style={styles.feedbackEntry}>
+                <Text style={styles.feedbackDate}>{formatDate(entry.timestamp)}</Text>
+                <Text style={styles.feedbackType}>
+                  Feedback: {entry.feedback === 'warm' ? 'Too Warm' : 
+                           entry.feedback === 'cold' ? 'Too Cold' : 
+                           'Just Right'}
+                </Text>
+                <View style={styles.weatherInfo}>
+                  <Text style={styles.weatherText}>
+                    Temperature: {convertTemp(entry.weather.temperature).toFixed(1)}°{temperatureUnit}
+                  </Text>
+                  <Text style={styles.weatherText}>
+                    Feels Like: {convertTemp(entry.weather.feelsLike).toFixed(1)}°{temperatureUnit}
+                  </Text>
+                  <Text style={styles.weatherText}>
+                    Humidity: {entry.weather.humidity}%
+                  </Text>
+                  <Text style={styles.weatherText}>
+                    Wind: {entry.weather.wind_kph} km/h
+                  </Text>
+                  <Text style={styles.weatherText}>
+                    UV Index: {entry.weather.uv}
+                  </Text>
+                  <Text style={styles.weatherText}>
+                    Conditions: {entry.weather.description}{isWindy(entry.weather.wind_kph) ? ', windy' : ''}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -213,6 +279,50 @@ const styles = StyleSheet.create({
   comfortBiasDescription: {
     fontSize: 14,
     color: '#666',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  clearButton: {
+    color: '#007AFF',
+    fontSize: 16,
+  },
+  emptyText: {
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  feedbackEntry: {
+    backgroundColor: '#f8f8f8',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  feedbackDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  feedbackType: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  weatherInfo: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  weatherText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 3,
   },
 });
 
