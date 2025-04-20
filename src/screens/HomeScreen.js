@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ScrollView, View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, RefreshControl } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCurrentLocation } from '../services/locationService';
 import { getWeather } from '../services/weatherService';
@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import WeatherInfo from '../components/WeatherInfo';
 import FeedbackButtons from '../components/FeedbackButtons';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [weatherData, setWeatherData] = useState(null);
@@ -182,6 +182,13 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Image 
+          source={require('../../assets/images/WeatherWear.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
       <ScrollView 
         style={styles.scrollView} 
         bounces={true}
@@ -195,10 +202,6 @@ const HomeScreen = () => {
           />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>WeatherWear</Text>
-        </View>
-
         <WeatherInfo weatherData={weatherData} />
 
         <View style={styles.recommendationContainer}>
@@ -279,12 +282,18 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingTop: 0,
+    paddingBottom: 0,
+    alignItems: 'flex-start',
+    backgroundColor: '#fff',
+    zIndex: 1,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  logo: {
+    width: 250,
+    height: 100,
+    marginTop: -15,
+    marginBottom: -30,
+    marginLeft: -5,
   },
   recommendationContainer: {
     padding: 15,
