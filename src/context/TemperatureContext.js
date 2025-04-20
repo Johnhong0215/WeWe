@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import weatherSensitivityModel from '../services/weatherSensitivityModel';
 
 const TemperatureContext = createContext();
 const COMFORT_BIAS_KEY = '@weatherwear_comfort_bias';
@@ -18,6 +19,7 @@ export const TemperatureProvider = ({ children }) => {
     loadComfortBias();
     loadLastFeedback();
     loadFeedbackHistory();
+    weatherSensitivityModel.load();
   }, []);
 
   const loadComfortBias = async () => {
@@ -199,6 +201,7 @@ export const TemperatureProvider = ({ children }) => {
       setCurrentRecommendation,
       isFeedbackAvailable,
       feedbackHistory,
+      setFeedbackHistory,
       updateFeedbackHistory,
       loadFeedbackHistory
     }}>

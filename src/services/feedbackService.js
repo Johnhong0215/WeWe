@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import weatherSensitivityModel from './weatherSensitivityModel';
 
 const FEEDBACK_KEY = '@weatherwear_feedback';
 const PREFERENCES_KEY = '@weatherwear_preferences';
@@ -65,6 +66,15 @@ export const storeFeedback = async (weatherData, feedback) => {
       type: feedback,
     };
     await AsyncStorage.setItem(LAST_FEEDBACK_KEY, JSON.stringify(lastFeedback));
+
+    // Update sensitivity model
+    await weatherSensitivityModel.update(
+      weatherData.current.temperature,
+      weatherData.current.humidity,
+      weatherData.current.wind_kph,
+      weatherData.current.uv,
+      feedback
+    );
 
     // Update comfort bias
     const newBias = calculateComfortBias(feedbackData);

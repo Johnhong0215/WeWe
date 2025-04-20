@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTemperature } from '../context/TemperatureContext';
 import { getRecommendation } from '../services/recommendationService';
 import { getFeedbackHistory, clearFeedbackHistory } from '../services/feedbackService';
+import weatherSensitivityModel from '../services/weatherSensitivityModel';
 
 const SettingsScreen = () => {
   const [language, setLanguage] = useState('en');
   const [gender, setGender] = useState('male');
-  const { temperatureUnit, toggleTemperatureUnit, comfortBias, currentRecommendation, setCurrentRecommendation, feedbackHistory, loadFeedbackHistory, convertTemp } = useTemperature();
+  const { 
+    temperatureUnit, 
+    toggleTemperatureUnit, 
+    comfortBias, 
+    currentRecommendation, 
+    setCurrentRecommendation, 
+    feedbackHistory, 
+    setFeedbackHistory,
+    loadFeedbackHistory, 
+    convertTemp 
+  } = useTemperature();
 
   useEffect(() => {
     loadSettings();
@@ -17,10 +28,43 @@ const SettingsScreen = () => {
 
   const handleClearHistory = async () => {
     try {
-      await AsyncStorage.removeItem('@feedback_history');
-      loadFeedbackHistory();
+      // Clear all feedback-related storage
+      await AsyncStorage.multiRemove([
+        '@weatherwear_feedback_history',
+        '@weatherwear_feedback',
+        '@weatherwear_last_feedback',
+        '@weatherwear_last_feedback_time',
+        '@weatherwear_comfort_bias'
+      ]);
+      
+      // Reset the weather sensitivity model
+      await weatherSensitivityModel.resetWeights();
+      
+      // Reset the state in TemperatureContext
+      setFeedbackHistory([]);
+      
+      // Force a UI update by reloading the feedback history
+      await loadFeedbackHistory();
+      
+      // Show success message
+      Alert.alert(
+        'Success',
+        'Feedback history has been cleared',
+        [{ 
+          text: 'OK',
+          onPress: () => {
+            // Force a re-render of the feedback history section
+            setFeedbackHistory([]);
+          }
+        }]
+      );
     } catch (error) {
       console.error('Error clearing feedback history:', error);
+      Alert.alert(
+        'Error',
+        'Failed to clear feedback history',
+        [{ text: 'OK' }]
+      );
     }
   };
 

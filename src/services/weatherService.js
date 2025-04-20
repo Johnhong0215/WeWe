@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import weatherSensitivityModel from './weatherSensitivityModel';
 
 // Mock weather service that generates simulated weather data
 const getRandomTemp = (baseTemp, variance) => {
@@ -103,7 +104,7 @@ const setCachedWeather = async (data) => {
   }
 };
 
-const calculateFeelsLike = (temp_c, humidity, wind_kmh, uv_index) => {
+const calculateFeelsLike = async (temp_c, humidity, wind_kmh, uv_index) => {
   // Convert wind to m/s
   const wind_ms = wind_kmh / 3.6;
 
@@ -136,16 +137,38 @@ const calculateFeelsLike = (temp_c, humidity, wind_kmh, uv_index) => {
     feels_like += uv_adjustment;
   }
 
+  // Apply personalized sensitivity model adjustment
+  try {
+    // Load the model from AsyncStorage before using it
+    await weatherSensitivityModel.load();
+
+    const personalizedFeelsLike = weatherSensitivityModel.getPersonalizedFeelsLike(
+      feels_like,
+      temp_c,
+      humidity,
+      wind_kmh,
+      uv_index
+    );
+
+    // Only use the personalized value if it's a valid number
+    if (!isNaN(personalizedFeelsLike)) {
+      return personalizedFeelsLike;
+    }
+  } catch (error) {
+    console.error('Error applying sensitivity model:', error);
+  }
+
+  // Return the base feels like if personalization fails
   return feels_like;
 };
 
-const transformWeatherData = (data) => {
+const transformWeatherData = async (data) => {
   // Transform WeatherAPI format to our format
   const temp_c = data.current.temp_c;
   const humidity = data.current.humidity;
   const wind_kmh = data.current.wind_kph;
   const uv_index = data.current.uv || 0;
-  const calculatedFeelsLike = calculateFeelsLike(temp_c, humidity, wind_kmh, uv_index);
+  const calculatedFeelsLike = await calculateFeelsLike(temp_c, humidity, wind_kmh, uv_index);
 
   return {
     current: {
@@ -187,7 +210,7 @@ export const getWeather = async (latitude, longitude, forceRefresh = false) => {
     console.log('[Weather API] Raw response:', apiData);
 
     // Transform the data to our format
-    const transformedData = transformWeatherData(apiData);
+    const transformedData = await transformWeatherData(apiData);
     console.log('[Weather API] Transformed data:', transformedData);
 
     // Validate transformed data
@@ -207,21 +230,28 @@ export const getWeather = async (latitude, longitude, forceRefresh = false) => {
 };
 
 // Fallback mock weather data function
-const getMockWeather = (latitude) => {
+const getMockWeather = async (latitude) => {
   console.log('[Weather API] Using mock weather data');
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const baseTemp = getSeasonalBaseTemp(latitude, currentMonth);
   const currentTemp = getRandomTemp(baseTemp, 20);
+  const humidity = Math.round(Math.random() * 30 + 50);
+  const windSpeed = Math.round(Math.random() * 15 + 5);
+  const uv = Math.round(Math.random() * 10);
+
+  const feelsLike = await calculateFeelsLike(currentTemp, humidity, windSpeed, uv);
 
   return {
     current: {
       temperature: currentTemp,
-      feelsLike: getRandomTemp(currentTemp, 5),
-      humidity: Math.round(Math.random() * 30 + 50),
-      windSpeed: Math.round(Math.random() * 15 + 5),
+      feelsLike: feelsLike,
+      humidity: humidity,
+      wind_kph: windSpeed,
+      wind_mph: Math.round(windSpeed * 0.621371),
       description: getWeatherDescription(currentTemp),
-      icon: '01d'
+      icon: '01d',
+      uv: uv
     },
     hourly: Array.from({ length: 6 }, (_, i) => {
       const hourTemp = getRandomTemp(currentTemp, 10);
