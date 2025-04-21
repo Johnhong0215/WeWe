@@ -190,6 +190,7 @@ const SettingsScreen = () => {
           <View style={styles.comfortBiasContainer}>
             <Text style={styles.comfortBiasText}>
               {i18n.t('current_comfort_bias', { value: comfortBias > 0 ? '+' + comfortBias : comfortBias })}
+              {temperatureUnit === 'C' ? '°C' : '°F'}
             </Text>
             <Text style={styles.comfortBiasDescription}>
               {comfortBias > 0 ? i18n.t('prefer_warmer') :

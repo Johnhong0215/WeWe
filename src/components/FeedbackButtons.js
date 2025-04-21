@@ -7,7 +7,7 @@ import i18n from '../utils/i18n';
 const FeedbackButtons = ({ onFeedback }) => {
   const [lastFeedback, setLastFeedback] = useState(null);
   const [isChanging, setIsChanging] = useState(false);
-  const { updateComfortBias, isFeedbackAvailable } = useTemperature();
+  const { isFeedbackAvailable } = useTemperature();
 
   useEffect(() => {
     checkLastFeedback();
@@ -20,7 +20,6 @@ const FeedbackButtons = ({ onFeedback }) => {
   };
 
   const handleFeedback = async (type) => {
-    updateComfortBias(type);
     await onFeedback(type);
     checkLastFeedback();
   };

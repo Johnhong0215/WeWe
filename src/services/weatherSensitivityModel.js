@@ -14,6 +14,7 @@ class WeatherSensitivityModel {
     this.epsilon = 0; // bias/intercept
     this.lr = 0.05; // learning rate
     this.feedbackHistory = [];
+    this.lastWeightedAdjustment = 0;
   }
 
   async load() {
@@ -226,17 +227,17 @@ class WeatherSensitivityModel {
     const biasWeight = 1 / (1 + Math.exp(-0.7 * (feedbackCount - 5)));
    
     // Weighted adjustment
-    const weightedAdjustment = clampedBias * biasWeight;
+    this.lastWeightedAdjustment = -1 * clampedBias * biasWeight;
     console.log('[PersonalizedFeelsLike] Weighted adjustment:', {
       baseFeelsLike,
       rawBias,
       clampedBias,
       biasWeight,
-      weightedAdjustment,
+      weightedAdjustment: this.lastWeightedAdjustment,
       feedbackCount
     });
    
-    const personalized = baseFeelsLike - weightedAdjustment;
+    const personalized = baseFeelsLike + this.lastWeightedAdjustment;
    
     if (!Number.isFinite(personalized)) {
       console.warn('[PersonalizedFeelsLike] Invalid result:', {
@@ -244,16 +245,18 @@ class WeatherSensitivityModel {
         rawBias,
         clampedBias,
         biasWeight,
-        weightedAdjustment,
+        weightedAdjustment: this.lastWeightedAdjustment,
         personalized
       });
       return baseFeelsLike;
     }
-   
+    
     return personalized;
   }
-  
-  
+
+  getLastWeightedAdjustment() {
+    return this.lastWeightedAdjustment;
+  }
 }
 
 // Create and export a singleton instance

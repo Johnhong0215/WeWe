@@ -3,37 +3,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import weatherSensitivityModel from '../services/weatherSensitivityModel';
 
 const TemperatureContext = createContext();
-const COMFORT_BIAS_KEY = '@weatherwear_comfort_bias';
 const LAST_FEEDBACK_KEY = '@weatherwear_last_feedback';
 const LAST_FEEDBACK_TIME_KEY = '@weatherwear_last_feedback_time';
 
 export const TemperatureProvider = ({ children }) => {
   const [temperatureUnit, setTemperatureUnit] = useState('C');
-  const [comfortBias, setComfortBias] = useState(0);
   const [lastFeedback, setLastFeedback] = useState(null);
   const [lastFeedbackTime, setLastFeedbackTime] = useState(null);
   const [currentRecommendation, setCurrentRecommendation] = useState(null);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
 
   useEffect(() => {
-    loadComfortBias();
     loadLastFeedback();
     loadFeedbackHistory();
     weatherSensitivityModel.load();
   }, []);
-
-  const loadComfortBias = async () => {
-    try {
-      const savedBias = await AsyncStorage.getItem(COMFORT_BIAS_KEY);
-      if (savedBias !== null) {
-        const parsedBias = parseFloat(savedBias);
-        setComfortBias(isNaN(parsedBias) ? 0 : parsedBias);
-      }
-    } catch (error) {
-      console.error('Error loading comfort bias:', error);
-      setComfortBias(0);
-    }
-  };
 
   const loadLastFeedback = async () => {
     try {
@@ -58,18 +42,6 @@ export const TemperatureProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading feedback history:', error);
-    }
-  };
-
-  const saveComfortBias = async (newBias) => {
-    try {
-      const biasToSave = parseFloat(newBias);
-      if (!isNaN(biasToSave)) {
-        await AsyncStorage.setItem(COMFORT_BIAS_KEY, biasToSave.toString());
-        setComfortBias(biasToSave);
-      }
-    } catch (error) {
-      console.error('Error saving comfort bias:', error);
     }
   };
 
@@ -118,55 +90,6 @@ export const TemperatureProvider = ({ children }) => {
     }
   };
 
-  const updateComfortBias = (feedback) => {
-    let newBias = comfortBias;
-    const currentTime = Date.now();
-    const twoHoursInMs = 2 * 60 * 60 * 1000;
-
-    // If there was a previous feedback and it's been less than 2 hours
-    if (lastFeedback && lastFeedbackTime && (currentTime - lastFeedbackTime < twoHoursInMs)) {
-      // Revert the previous feedback effect
-      switch (lastFeedback) {
-        case 'cold':
-          newBias -= 1;
-          break;
-        case 'warm':
-          newBias += 1;
-          break;
-        case 'perfect':
-          if (comfortBias > 0) {
-            newBias += 0.5;
-          } else if (comfortBias < 0) {
-            newBias -= 0.5;
-          }
-          break;
-      }
-    }
-
-    // Apply the new feedback effect
-    switch (feedback) {
-      case 'cold':
-        newBias += 1;
-        break;
-      case 'warm':
-        newBias -= 1;
-        break;
-      case 'perfect':
-        // Gradually move bias back to 0 if it's not already
-        if (newBias > 0) {
-          newBias -= 0.5;
-        } else if (newBias < 0) {
-          newBias += 0.5;
-        }
-        break;
-    }
-
-    // Limit bias to reasonable range (-5 to +5)
-    newBias = Math.max(-5, Math.min(5, newBias));
-    saveComfortBias(newBias);
-    saveLastFeedback(feedback);
-  };
-
   const toggleTemperatureUnit = (unit) => {
     setTemperatureUnit(unit);
   };
@@ -193,8 +116,9 @@ export const TemperatureProvider = ({ children }) => {
       temperatureUnit, 
       toggleTemperatureUnit, 
       convertTemp,
-      comfortBias,
-      updateComfortBias,
+      comfortBias: temperatureUnit === 'F' 
+        ? (weatherSensitivityModel.getLastWeightedAdjustment() * 1.8).toFixed(1)
+        : weatherSensitivityModel.getLastWeightedAdjustment().toFixed(1),
       lastFeedback,
       lastFeedbackTime,
       currentRecommendation,
@@ -203,7 +127,8 @@ export const TemperatureProvider = ({ children }) => {
       feedbackHistory,
       setFeedbackHistory,
       updateFeedbackHistory,
-      loadFeedbackHistory
+      loadFeedbackHistory,
+      saveLastFeedback
     }}>
       {children}
     </TemperatureContext.Provider>

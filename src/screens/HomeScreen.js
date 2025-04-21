@@ -17,7 +17,12 @@ const HomeScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [weatherData, setWeatherData] = useState(null);
   const [error, setError] = useState(null);
-  const { currentRecommendation, setCurrentRecommendation, updateFeedbackHistory } = useTemperature();
+  const { 
+    currentRecommendation, 
+    setCurrentRecommendation, 
+    updateFeedbackHistory,
+    saveLastFeedback 
+  } = useTemperature();
   const { language } = useLanguage();
 
   // Add effect to reload data when language changes
@@ -130,6 +135,9 @@ const HomeScreen = ({ navigation }) => {
 
       // Update feedback history through context
       await updateFeedbackHistory(feedbackEntry);
+
+      // Save last feedback time
+      await saveLastFeedback(feedback);
 
       // Store the feedback for comfort bias calculation
       const success = await storeFeedback(weatherData, feedback);

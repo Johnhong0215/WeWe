@@ -48,7 +48,7 @@ export default {
   feedback_history: "Feedback History",
   clear_history: "Clear History",
   comfort_level: "Comfort Level",
-  current_comfort_bias: "Current Comfort Bias: {{value}}°C",
+  current_comfort_bias: "Current Comfort Bias: {{value}}",
   prefer_warmer: "You prefer warmer temperatures",
   prefer_cooler: "You prefer cooler temperatures",
   no_preference: "Your temperature preference is neutral",
