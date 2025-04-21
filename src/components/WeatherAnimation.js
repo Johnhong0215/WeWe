@@ -1,12 +1,22 @@
 import React from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 
-const WeatherAnimation = ({ gender = 'male' }) => {
+const WeatherAnimation = ({ gender = 'male', weatherData }) => {
+  const isWindy = weatherData?.current?.wind_kph > 20;
+  
   return (
     <View style={styles.container}>
       <Image
-        key={gender}
-        source={gender === 'female' ? require('../../assets/animation/female.gif') : require('../../assets/animation/male.gif')}
+        key={`${gender}-${isWindy}`}
+        source={
+          isWindy
+            ? gender === 'female'
+              ? require('../../assets/animation/female.gif')
+              : require('../../assets/animation/wind_male.gif')
+            : gender === 'female'
+              ? require('../../assets/animation/female.gif')
+              : require('../../assets/animation/male.gif')
+        }
         style={styles.image}
         resizeMode="contain"
       />

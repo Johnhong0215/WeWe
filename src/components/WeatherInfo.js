@@ -19,7 +19,7 @@ const WeatherInfo = ({ weatherData }) => {
   return (
     <View style={styles.container}>
       <WeatherSummary weatherData={weatherData} />
-      <WeatherAnimation gender={currentRecommendation?.gender || 'male'} />
+      <WeatherAnimation gender={currentRecommendation?.gender || 'male'} weatherData={weatherData} />
       <WeatherDetails weatherData={weatherData} />
     </View>
   );
