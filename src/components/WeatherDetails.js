@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTemperature } from '../context/TemperatureContext';
+import i18n from '../utils/i18n';
 
 const WeatherDetails = ({ weatherData }) => {
   const { temperatureUnit } = useTemperature();
@@ -22,21 +23,21 @@ const WeatherDetails = ({ weatherData }) => {
     <View style={styles.container}>
       <View style={styles.detailRow}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Humidity</Text>
+          <Text style={styles.detailLabel}>{i18n.t('humidity')}</Text>
           <Text style={styles.detailValue}>{current.humidity}%</Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Wind</Text>
+          <Text style={styles.detailLabel}>{i18n.t('wind')}</Text>
           <Text style={styles.detailValue}>{getWindSpeed()}</Text>
         </View>
       </View>
       <View style={styles.detailRow}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>UV Index</Text>
+          <Text style={styles.detailLabel}>{i18n.t('uv_index')}</Text>
           <Text style={styles.detailValue}>Low</Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Rain Chance</Text>
+          <Text style={styles.detailLabel}>{i18n.t('rain_chance')}</Text>
           <Text style={styles.detailValue}>{current.chance_of_rain || 0}%</Text>
         </View>
       </View>

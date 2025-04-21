@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTemperature } from '../context/TemperatureContext';
+import i18n from '../utils/i18n';
 
 const WeatherSummary = ({ weatherData }) => {
   const { temperatureUnit, convertTemp } = useTemperature();
@@ -19,7 +20,7 @@ const WeatherSummary = ({ weatherData }) => {
   };
 
   const getDescription = () => {
-    let description = current.description || 'No description available';
+    let description = current.description || i18n.t('error');
     
     // Check if it's windy (threshold: 20 km/h or 12.4 mph)
     const isWindy = temperatureUnit === 'C' 
@@ -27,7 +28,7 @@ const WeatherSummary = ({ weatherData }) => {
       : current.wind_mph > 12.4;
 
     if (isWindy) {
-      description += ', windy';
+      description += `, ${i18n.t('windy')}`;
     }
 
     return description;
@@ -42,7 +43,7 @@ const WeatherSummary = ({ weatherData }) => {
         {getDescription()}
       </Text>
       <Text style={styles.feelsLike}>
-        Feels like: {formatTemperature(convertTemp(current.feelsLike))}°{temperatureUnit}
+        {i18n.t('feels_like')}: {formatTemperature(convertTemp(current.feelsLike))}°{temperatureUnit}
       </Text>
     </View>
   );

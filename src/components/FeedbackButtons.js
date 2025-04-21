@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { getLastFeedback, getFeedbackMessage } from '../services/feedbackService';
 import { useTemperature } from '../context/TemperatureContext';
+import i18n from '../utils/i18n';
 
 const FeedbackButtons = ({ onFeedback }) => {
   const [lastFeedback, setLastFeedback] = useState(null);
@@ -30,21 +31,21 @@ const FeedbackButtons = ({ onFeedback }) => {
         style={[styles.button, styles.coldButton]}
         onPress={() => handleFeedback('cold')}
       >
-        <Text style={styles.buttonText}>Too Cold</Text>
+        <Text style={styles.buttonText}>{i18n.t('too_cold')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.button, styles.perfectButton]}
-        onPress={() => handleFeedback('perfect')}
+        style={[styles.button, styles.justRightButton]}
+        onPress={() => handleFeedback('just_right')}
       >
-        <Text style={styles.buttonText}>Perfect</Text>
+        <Text style={styles.buttonText}>{i18n.t('just_right')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.button, styles.warmButton]}
-        onPress={() => handleFeedback('warm')}
+        style={[styles.button, styles.hotButton]}
+        onPress={() => handleFeedback('hot')}
       >
-        <Text style={styles.buttonText}>Too Warm</Text>
+        <Text style={styles.buttonText}>{i18n.t('too_hot')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -67,6 +68,7 @@ const FeedbackButtons = ({ onFeedback }) => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>{i18n.t('feedback_title')}</Text>
       {(isChanging || !lastFeedback || isFeedbackAvailable()) ? renderFeedbackButtons() : renderFeedbackMessage()}
     </View>
   );
@@ -98,10 +100,10 @@ const styles = StyleSheet.create({
   coldButton: {
     backgroundColor: '#4A90E2',
   },
-  perfectButton: {
+  justRightButton: {
     backgroundColor: '#2ECC71',
   },
-  warmButton: {
+  hotButton: {
     backgroundColor: '#E74C3C',
   },
   buttonText: {
@@ -129,6 +131,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '500',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
   },
 });
 

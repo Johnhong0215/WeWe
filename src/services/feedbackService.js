@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import weatherSensitivityModel from './weatherSensitivityModel';
+import i18n from '../utils/i18n';
 
 const FEEDBACK_KEY = '@weatherwear_feedback';
 const PREFERENCES_KEY = '@weatherwear_preferences';
@@ -115,11 +116,11 @@ export const getLastFeedback = async () => {
 export const getFeedbackMessage = (feedbackType) => {
   switch (feedbackType) {
     case 'cold':
-      return "You said it feels too cold! We'll adjust our recommendations to be warmer.";
+      return i18n.t('feedback_cold_message');
     case 'warm':
-      return "You said it feels too warm! We'll adjust our recommendations to be cooler.";
+      return i18n.t('feedback_warm_message');
     case 'perfect':
-      return "You said it feels perfect! We'll keep this in mind for future recommendations.";
+      return i18n.t('feedback_perfect_message');
     default:
       return null;
   }

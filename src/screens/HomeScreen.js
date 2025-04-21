@@ -6,9 +6,11 @@ import { getWeather } from '../services/weatherService';
 import { getRecommendation } from '../services/recommendationService';
 import { storeFeedback, storeFeedbackWithWeather } from '../services/feedbackService';
 import { useTemperature } from '../context/TemperatureContext';
+import { useLanguage } from '../context/LanguageContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WeatherInfo from '../components/WeatherInfo';
 import FeedbackButtons from '../components/FeedbackButtons';
+import i18n from '../utils/i18n';
 
 const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
@@ -16,6 +18,12 @@ const HomeScreen = ({ navigation }) => {
   const [weatherData, setWeatherData] = useState(null);
   const [error, setError] = useState(null);
   const { currentRecommendation, setCurrentRecommendation, updateFeedbackHistory } = useTemperature();
+  const { language } = useLanguage();
+
+  // Add effect to reload data when language changes
+  useEffect(() => {
+    loadWeatherData(true);
+  }, [language]);
 
   const clearCache = async () => {
     try {
@@ -76,9 +84,9 @@ const HomeScreen = ({ navigation }) => {
     } catch (err) {
       console.error('Error loading weather data:', err);
       if (err.message.includes('location')) {
-        setError('Unable to access location. Please enable location services and try again.');
+        setError(i18n.t('location_error'));
       } else {
-        setError('Unable to load weather data. Please check your internet connection and try again.');
+        setError(i18n.t('weather_error'));
       }
       setWeatherData(null);
       setCurrentRecommendation(null);
@@ -153,7 +161,7 @@ const HomeScreen = ({ navigation }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
-        <Text style={styles.loadingText}>Getting your weather data...</Text>
+        <Text style={styles.loadingText}>{i18n.t('loading')}</Text>
       </View>
     );
   }
@@ -163,7 +171,7 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{i18n.t('retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -172,9 +180,9 @@ const HomeScreen = ({ navigation }) => {
   if (!weatherData || !weatherData.current) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Weather data not available</Text>
+        <Text style={styles.errorText}>{i18n.t('error')}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>{i18n.t('retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -197,7 +205,7 @@ const HomeScreen = ({ navigation }) => {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor="#007AFF"
-            title="Pull to refresh"
+            title={i18n.t('pull_to_refresh')}
             titleColor="#666"
           />
         }
@@ -211,10 +219,10 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.comfortCategoryText}>
             {currentRecommendation?.adjustedFeelsLike !== undefined && 
               (currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike > 3
-                ? "You tend to get cold easily"
+                ? i18n.t('comfort_cold')
                 : currentRecommendation.adjustedFeelsLike - currentRecommendation.originalFeelsLike < -3
-                ? "You tend to feel warm more quickly"
-                : "Your comfort level is typical")}
+                ? i18n.t('comfort_warm')
+                : i18n.t('comfort_normal'))}
           </Text>
         </View>
 

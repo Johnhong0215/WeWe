@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTemperature } from '../context/TemperatureContext';
+import { useLanguage } from '../context/LanguageContext';
 import { getRecommendation } from '../services/recommendationService';
 import { getFeedbackHistory, clearFeedbackHistory } from '../services/feedbackService';
 import weatherSensitivityModel from '../services/weatherSensitivityModel';
+import i18n from '../utils/i18n';
 
 const SettingsScreen = () => {
-  const [language, setLanguage] = useState('en');
   const [gender, setGender] = useState('male');
+  const { language, changeLanguage } = useLanguage();
   const { 
     temperatureUnit, 
     toggleTemperatureUnit, 
@@ -48,10 +50,10 @@ const SettingsScreen = () => {
       
       // Show success message
       Alert.alert(
-        'Success',
-        'Feedback history has been cleared',
+        i18n.t('clear_success'),
+        i18n.t('clear_success_message'),
         [{ 
-          text: 'OK',
+          text: i18n.t('ok'),
           onPress: () => {
             // Force a re-render of the feedback history section
             setFeedbackHistory([]);
@@ -61,9 +63,9 @@ const SettingsScreen = () => {
     } catch (error) {
       console.error('Error clearing feedback history:', error);
       Alert.alert(
-        'Error',
-        'Failed to clear feedback history',
-        [{ text: 'OK' }]
+        i18n.t('clear_error'),
+        i18n.t('clear_error_message'),
+        [{ text: i18n.t('ok') }]
       );
     }
   };
@@ -75,21 +77,10 @@ const SettingsScreen = () => {
 
   const loadSettings = async () => {
     try {
-      const savedLanguage = await AsyncStorage.getItem('@language');
       const savedGender = await AsyncStorage.getItem('@gender');
-      if (savedLanguage) setLanguage(savedLanguage);
       if (savedGender) setGender(savedGender);
     } catch (error) {
       console.error('Error loading settings:', error);
-    }
-  };
-
-  const saveLanguage = async (lang) => {
-    try {
-      await AsyncStorage.setItem('@language', lang);
-      setLanguage(lang);
-    } catch (error) {
-      console.error('Error saving language:', error);
     }
   };
 
@@ -126,39 +117,39 @@ const SettingsScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
-        <Text style={styles.header}>Settings</Text>
+        <Text style={styles.header}>{i18n.t('settings')}</Text>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Language</Text>
+          <Text style={styles.sectionTitle}>{i18n.t('language')}</Text>
           <View style={styles.buttonGroup}>
             <TouchableOpacity
               style={[styles.button, language === 'en' && styles.activeButton]}
-              onPress={() => saveLanguage('en')}
+              onPress={() => changeLanguage('en')}
             >
               <Text style={[styles.buttonText, language === 'en' && styles.activeButtonText]}>
-                English
+                {i18n.t('english')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, language === 'ko' && styles.activeButton]}
-              onPress={() => saveLanguage('ko')}
+              onPress={() => changeLanguage('ko')}
             >
               <Text style={[styles.buttonText, language === 'ko' && styles.activeButtonText]}>
-                한국어
+                {i18n.t('korean')}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gender</Text>
+          <Text style={styles.sectionTitle}>{i18n.t('gender')}</Text>
           <View style={styles.buttonGroup}>
             <TouchableOpacity
               style={[styles.button, gender === 'male' && styles.activeButton]}
               onPress={() => saveGender('male')}
             >
               <Text style={[styles.buttonText, gender === 'male' && styles.activeButtonText]}>
-                Male
+                {i18n.t('male')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -166,21 +157,21 @@ const SettingsScreen = () => {
               onPress={() => saveGender('female')}
             >
               <Text style={[styles.buttonText, gender === 'female' && styles.activeButtonText]}>
-                Female
+                {i18n.t('female')}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Temperature Unit</Text>
+          <Text style={styles.sectionTitle}>{i18n.t('temperature_unit')}</Text>
           <View style={styles.buttonGroup}>
             <TouchableOpacity
               style={[styles.button, temperatureUnit === 'C' && styles.activeButton]}
               onPress={() => toggleTemperatureUnit('C')}
             >
               <Text style={[styles.buttonText, temperatureUnit === 'C' && styles.activeButtonText]}>
-                Celsius
+                {i18n.t('celsius')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -188,65 +179,80 @@ const SettingsScreen = () => {
               onPress={() => toggleTemperatureUnit('F')}
             >
               <Text style={[styles.buttonText, temperatureUnit === 'F' && styles.activeButtonText]}>
-                Fahrenheit
+                {i18n.t('fahrenheit')}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Comfort Level</Text>
+          <Text style={styles.sectionTitle}>{i18n.t('comfort_level')}</Text>
           <View style={styles.comfortBiasContainer}>
             <Text style={styles.comfortBiasText}>
-              Current Comfort Bias: {comfortBias > 0 ? '+' : ''}{comfortBias}°C
+              {i18n.t('current_comfort_bias', { value: comfortBias > 0 ? '+' + comfortBias : comfortBias })}
             </Text>
             <Text style={styles.comfortBiasDescription}>
-              {comfortBias > 0 ? 'You prefer warmer temperatures' :
-               comfortBias < 0 ? 'You prefer cooler temperatures' :
-               'You are comfortable with the current temperature'}
+              {comfortBias > 0 ? i18n.t('prefer_warmer') :
+               comfortBias < 0 ? i18n.t('prefer_cooler') :
+               i18n.t('no_preference')}
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Feedback History</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('feedback_history')}</Text>
             {feedbackHistory.length > 0 && (
               <TouchableOpacity onPress={handleClearHistory}>
-                <Text style={styles.clearButton}>Clear History</Text>
+                <Text style={styles.clearButton}>{i18n.t('clear_history')}</Text>
               </TouchableOpacity>
             )}
           </View>
           
           {feedbackHistory.length === 0 ? (
-            <Text style={styles.emptyText}>No feedback history yet</Text>
+            <Text style={styles.emptyText}>{i18n.t('no_feedback_yet')}</Text>
           ) : (
             feedbackHistory.map((entry, index) => (
               <View key={index} style={styles.feedbackEntry}>
-                <Text style={styles.feedbackDate}>{formatDate(entry.timestamp)}</Text>
+                <Text style={styles.feedbackDate}>
+                  {new Date(entry.timestamp).toLocaleString(
+                    language === 'ko' ? 'ko-KR' : 'en-US',
+                    { 
+                      year: 'numeric',
+                      month: 'numeric',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: 'numeric',
+                      second: 'numeric',
+                      hour12: true
+                    }
+                  )}
+                </Text>
                 <Text style={styles.feedbackType}>
-                  Feedback: {entry.feedback === 'warm' ? 'Too Warm' : 
-                           entry.feedback === 'cold' ? 'Too Cold' : 
-                           'Just Right'}
+                  {i18n.t('feedback_label', { 
+                    type: i18n.t(entry.feedback === 'warm' ? 'too_hot' : 
+                                entry.feedback === 'cold' ? 'too_cold' : 
+                                'just_right')
+                  })}
                 </Text>
                 <View style={styles.weatherInfo}>
                   <Text style={styles.weatherText}>
-                    Temperature: {convertTemp(entry.weather.temperature).toFixed(1)}°{temperatureUnit}
+                    {i18n.t('temperature_at_time', {
+                      temp: convertTemp(entry.weather.temperature).toFixed(1),
+                      unit: temperatureUnit
+                    })}
                   </Text>
                   <Text style={styles.weatherText}>
-                    Feels Like: {convertTemp(entry.weather.feelsLike).toFixed(1)}°{temperatureUnit}
+                    {i18n.t('feels_like')}: {convertTemp(entry.weather.feelsLike).toFixed(1)}°{temperatureUnit}
                   </Text>
                   <Text style={styles.weatherText}>
-                    Humidity: {entry.weather.humidity}%
+                    {i18n.t('humidity')}: {entry.weather.humidity}%
                   </Text>
                   <Text style={styles.weatherText}>
-                    Wind: {entry.weather.wind_kph} km/h
+                    {i18n.t('wind')}: {entry.weather.wind_kph} km/h
                   </Text>
                   <Text style={styles.weatherText}>
-                    UV Index: {entry.weather.uv}
-                  </Text>
-                  <Text style={styles.weatherText}>
-                    Conditions: {entry.weather.description}{isWindy(entry.weather.wind_kph) ? ', windy' : ''}
+                    {i18n.t('uv_index')}: {entry.weather.uv}
                   </Text>
                 </View>
               </View>
