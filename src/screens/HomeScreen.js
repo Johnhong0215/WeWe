@@ -202,31 +202,10 @@ const HomeScreen = ({ navigation }) => {
           />
         }
       >
-        <WeatherInfo weatherData={weatherData} />
-
-        <View style={styles.recommendationContainer}>
-          {currentRecommendation && (
-            <>
-              <Text style={styles.recommendationText}>
-                {currentRecommendation.recommendation}
-              </Text>
-              
-              {currentRecommendation.temperatureShift?.hasShift && (
-                <View style={styles.temperatureShiftContainer}>
-                  <Text style={styles.temperatureShiftTitle}>
-                    Temperature Change Alert:
-                  </Text>
-                  <Text style={styles.temperatureShiftText}>
-                    Temperature will change by {Math.abs(Math.round((currentRecommendation.temperatureShift.futureTemp - currentRecommendation.temperatureShift.currentTemp) * 5/9))}°C in {currentRecommendation.temperatureShift.hoursAhead} hours.
-                  </Text>
-                  <Text style={styles.futureRecommendationText}>
-                    Later: {currentRecommendation.futureRecommendation}
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
-        </View>
+        <WeatherInfo 
+          weatherData={weatherData} 
+          recommendation={currentRecommendation}
+        />
 
         <View style={styles.comfortCategoryContainer}>
           <Text style={styles.comfortCategoryText}>
@@ -295,53 +274,12 @@ const styles = StyleSheet.create({
     marginBottom: -30,
     marginLeft: -5,
   },
-  recommendationContainer: {
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    margin: 15,
-    borderRadius: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  recommendationText: {
-    fontSize: 20,
-    textAlign: 'center',
-    color: '#333',
-    lineHeight: 28,
+  scrollView: {
+    flex: 1,
   },
   feedbackContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-  },
-  temperatureShiftContainer: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
-  },
-  temperatureShiftTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 5,
-  },
-  temperatureShiftText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  futureRecommendationText: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
   },
   comfortCategoryContainer: {
     marginHorizontal: 15,
@@ -357,9 +295,6 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  scrollView: {
-    flex: 1,
   },
 });
 

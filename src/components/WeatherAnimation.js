@@ -11,8 +11,8 @@ const WeatherAnimation = ({ gender = 'male', weatherData }) => {
         source={
           isWindy
             ? gender === 'female'
-              ? require('../../assets/animation/female.gif')
-              : require('../../assets/animation/wind_male.gif')
+              ? require('../../assets/animation/female_wind.gif')
+              : require('../../assets/animation/male_wind.gif')
             : gender === 'female'
               ? require('../../assets/animation/female.gif')
               : require('../../assets/animation/male.gif')

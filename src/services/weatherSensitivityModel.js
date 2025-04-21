@@ -236,7 +236,7 @@ class WeatherSensitivityModel {
       feedbackCount
     });
    
-    const personalized = baseFeelsLike + weightedAdjustment;
+    const personalized = baseFeelsLike - weightedAdjustment;
    
     if (!Number.isFinite(personalized)) {
       console.warn('[PersonalizedFeelsLike] Invalid result:', {
