@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MODEL_KEY = '@weatherwear_sensitivity_model';
-const FEEDBACK_KEY = '@weatherwear_feedback_history';
+const FEEDBACK_HISTORY_KEY = '@weatherwear_feedback_history';
 const MAX_FEEDBACK_HISTORY = 10;
 const WEIGHT_LIMIT = 1.0; // Maximum absolute value for weights
 
@@ -33,7 +33,7 @@ class WeatherSensitivityModel {
       }
 
       // Load shared feedback history
-      const savedFeedback = await AsyncStorage.getItem(FEEDBACK_KEY);
+      const savedFeedback = await AsyncStorage.getItem(FEEDBACK_HISTORY_KEY);
       this.feedbackHistory = savedFeedback ? JSON.parse(savedFeedback) : [];
 
       // Debug log for feedback history
@@ -55,13 +55,21 @@ class WeatherSensitivityModel {
     return Math.max(Math.min(weight, WEIGHT_LIMIT), -WEIGHT_LIMIT);
   }
 
-  resetWeights() {
+  async resetWeights() {
     this.alpha = 0;
     this.beta = 0;
     this.gamma = 0;
     this.delta = 0;
     this.epsilon = 0;
     this.feedbackHistory = [];
+    this.lastWeightedAdjustment = 0;
+    
+    // Clear both model weights and feedback history from storage
+    try {
+      await AsyncStorage.multiRemove([MODEL_KEY, FEEDBACK_HISTORY_KEY]);
+    } catch (error) {
+      console.error('Error clearing model data:', error);
+    }
   }
 
   async save() {
@@ -129,9 +137,9 @@ class WeatherSensitivityModel {
   feedbackToScore(feedback) {
     switch (feedback) {
       case 'cold':
-        return 1;
-      case 'warm':
         return -1;
+      case 'warm':
+        return 1;
       case 'perfect':
         return 0;
       default:
@@ -167,10 +175,10 @@ class WeatherSensitivityModel {
     });
 
     // Update local feedback history
-    this.feedbackHistory = [newFeedback, ...this.feedbackHistory].slice(0, MAX_FEEDBACK_HISTORY);
+    this.feedbackHistory = [newFeedback];
 
     // Save feedback to shared storage
-    await AsyncStorage.setItem(FEEDBACK_KEY, JSON.stringify(this.feedbackHistory));
+    await AsyncStorage.setItem(FEEDBACK_HISTORY_KEY, JSON.stringify(this.feedbackHistory));
 
     // Debug log after update
     console.log('[Update Debug]', {
@@ -227,7 +235,7 @@ class WeatherSensitivityModel {
     const biasWeight = 1 / (1 + Math.exp(-0.7 * (feedbackCount - 5)));
    
     // Weighted adjustment
-    this.lastWeightedAdjustment = -1 * clampedBias * biasWeight;
+    this.lastWeightedAdjustment = clampedBias * biasWeight;
     console.log('[PersonalizedFeelsLike] Weighted adjustment:', {
       baseFeelsLike,
       rawBias,

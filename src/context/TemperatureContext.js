@@ -59,32 +59,9 @@ export const TemperatureProvider = ({ children }) => {
 
   const updateFeedbackHistory = async (newFeedback) => {
     try {
-      const history = await AsyncStorage.getItem('@feedback_history');
-      const feedbackHistory = history ? JSON.parse(history) : [];
-      
-      // Get the most recent feedback if it exists
-      const mostRecentFeedback = feedbackHistory[0];
-      const twoHoursInMs = 2 * 60 * 60 * 1000;
-      const currentTime = new Date().getTime();
-      
-      if (mostRecentFeedback) {
-        const lastFeedbackTime = new Date(mostRecentFeedback.timestamp).getTime();
-        const timeSinceLastFeedback = currentTime - lastFeedbackTime;
-
-        if (timeSinceLastFeedback < twoHoursInMs) {
-          // Within 2 hours, update the existing feedback
-          feedbackHistory[0] = newFeedback;
-        } else {
-          // After 2 hours, add as new entry
-          feedbackHistory.unshift(newFeedback);
-        }
-      } else {
-        // No previous feedback, add as new entry
-        feedbackHistory.unshift(newFeedback);
-      }
-      
-      await AsyncStorage.setItem('@feedback_history', JSON.stringify(feedbackHistory));
-      setFeedbackHistory(feedbackHistory);
+      // Store only the new feedback
+      await AsyncStorage.setItem('@feedback_history', JSON.stringify([newFeedback]));
+      setFeedbackHistory([newFeedback]);
     } catch (error) {
       console.error('Error updating feedback history:', error);
     }

@@ -194,10 +194,8 @@ export const storeFeedbackWithWeather = async (feedback, weatherData) => {
       }
     };
 
-    const existingFeedback = await getFeedbackHistory();
-    const updatedFeedback = [feedbackEntry, ...existingFeedback];
-    
-    await AsyncStorage.setItem(FEEDBACK_HISTORY_KEY, JSON.stringify(updatedFeedback));
+    // Store only the new feedback entry
+    await AsyncStorage.setItem(FEEDBACK_HISTORY_KEY, JSON.stringify([feedbackEntry]));
     return true;
   } catch (error) {
     console.error('Error storing feedback with weather:', error);
@@ -207,7 +205,19 @@ export const storeFeedbackWithWeather = async (feedback, weatherData) => {
 
 export const clearFeedbackHistory = async () => {
   try {
-    await AsyncStorage.removeItem(FEEDBACK_HISTORY_KEY);
+    // Clear all feedback-related storage
+    await AsyncStorage.multiRemove([
+      FEEDBACK_KEY,
+      FEEDBACK_HISTORY_KEY,
+      LAST_FEEDBACK_KEY,
+      COMFORT_BIAS_KEY,
+      PREFERENCES_KEY,
+      '@weatherwear_last_feedback_time'  // Add this key to be cleared
+    ]);
+
+    // Reset the weather sensitivity model
+    await weatherSensitivityModel.resetWeights();
+
     return true;
   } catch (error) {
     console.error('Error clearing feedback history:', error);

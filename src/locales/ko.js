@@ -48,7 +48,7 @@ export default {
   feedback_history: "피드백 기록",
   clear_history: "기록 삭제",
   comfort_level: "체감 수준",
-  current_comfort_bias: "현재 체감 편향: {{value}}°C",
+  current_comfort_bias: "현재 체감 편향: {{value}}",
   prefer_warmer: "따뜻한 온도를 선호하시는군요",
   prefer_cooler: "시원한 온도를 선호하시는군요",
   comfortable_current: "현재 온도가 적당하시군요",

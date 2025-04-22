@@ -35,14 +35,14 @@ const FeedbackButtons = ({ onFeedback }) => {
 
       <TouchableOpacity
         style={[styles.button, styles.justRightButton]}
-        onPress={() => handleFeedback('just_right')}
+        onPress={() => handleFeedback('perfect')}
       >
         <Text style={styles.buttonText}>{i18n.t('just_right')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.button, styles.hotButton]}
-        onPress={() => handleFeedback('hot')}
+        onPress={() => handleFeedback('warm')}
       >
         <Text style={styles.buttonText}>{i18n.t('too_hot')}</Text>
       </TouchableOpacity>

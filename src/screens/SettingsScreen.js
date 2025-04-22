@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTemperature } from '../context/TemperatureContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -10,6 +10,7 @@ import i18n from '../utils/i18n';
 
 const SettingsScreen = () => {
   const [gender, setGender] = useState('male');
+  const [refreshing, setRefreshing] = useState(false);
   const { language, changeLanguage } = useLanguage();
   const { 
     temperatureUnit, 
@@ -28,25 +29,39 @@ const SettingsScreen = () => {
     loadFeedbackHistory();
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Force model to recalculate comfort bias
+      await weatherSensitivityModel.load();
+      if (currentRecommendation?.weatherData) {
+        const weather = currentRecommendation.weatherData.current;
+        await weatherSensitivityModel.getPersonalizedFeelsLike(
+          weather.feelsLike,
+          weather.temperature,
+          weather.humidity,
+          weather.wind_kph,
+          weather.uv
+        );
+      }
+      await loadSettings();
+      await loadFeedbackHistory();
+    } catch (error) {
+      console.error('Error refreshing settings:', error);
+    }
+    setRefreshing(false);
+  }, [currentRecommendation]);
+
   const handleClearHistory = async () => {
     try {
-      // Clear all feedback-related storage
-      await AsyncStorage.multiRemove([
-        '@weatherwear_feedback_history',
-        '@weatherwear_feedback',
-        '@weatherwear_last_feedback',
-        '@weatherwear_last_feedback_time',
-        '@weatherwear_comfort_bias'
-      ]);
-      
-      // Reset the weather sensitivity model
-      await weatherSensitivityModel.resetWeights();
+      // Clear all feedback history using the service function
+      await clearFeedbackHistory();
       
       // Reset the state in TemperatureContext
       setFeedbackHistory([]);
       
-      // Force a UI update by reloading the feedback history
-      await loadFeedbackHistory();
+      // Clear last feedback time to make feedback button available again
+      await AsyncStorage.removeItem('@weatherwear_last_feedback_time');
       
       // Show success message
       Alert.alert(
@@ -116,7 +131,16 @@ const SettingsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+          />
+        }
+      >
         <Text style={styles.header}>{i18n.t('settings')}</Text>
 
         <View style={styles.section}>
@@ -193,8 +217,8 @@ const SettingsScreen = () => {
               {temperatureUnit === 'C' ? '°C' : '°F'}
             </Text>
             <Text style={styles.comfortBiasDescription}>
-              {comfortBias > 0 ? i18n.t('prefer_warmer') :
-               comfortBias < 0 ? i18n.t('prefer_cooler') :
+              {comfortBias > 0 ? i18n.t('prefer_cooler') :
+               comfortBias < 0 ? i18n.t('prefer_warmer') :
                i18n.t('no_preference')}
             </Text>
           </View>
