@@ -6,6 +6,7 @@ import { TemperatureProvider } from './src/context/TemperatureContext';
 import { LanguageProvider } from './src/context/LanguageContext';
 import HomeScreen from './src/screens/HomeScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PhotoScreen from './src/screens/PhotoScreen';
 import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();
@@ -23,6 +24,8 @@ export default function App() {
 
                   if (route.name === 'Home') {
                     iconName = focused ? 'home' : 'home-outline';
+                  } else if (route.name === 'Photo') {
+                    iconName = focused ? 'camera' : 'camera-outline';
                   } else if (route.name === 'Settings') {
                     iconName = focused ? 'settings' : 'settings-outline';
                   }
@@ -35,6 +38,7 @@ export default function App() {
               })}
             >
               <Tab.Screen name="Home" component={HomeScreen} />
+              <Tab.Screen name="Photo" component={PhotoScreen} />
               <Tab.Screen name="Settings" component={SettingsScreen} />
             </Tab.Navigator>
           </NavigationContainer>
