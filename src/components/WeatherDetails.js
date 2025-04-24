@@ -19,6 +19,19 @@ const WeatherDetails = ({ weatherData }) => {
     return `${current.wind_mph} mph`;
   };
 
+  const getUVIndexCategory = (uvIndex) => {
+    if (uvIndex === undefined || uvIndex === null) {
+      return 'Low';
+    }
+    
+    const category = uvIndex <= 2 ? 'Low' :
+                    uvIndex <= 5 ? 'Moderate' :
+                    uvIndex <= 7 ? 'High' :
+                    uvIndex <= 10 ? 'Very High' : 'Extreme';
+    
+    return category;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.detailRow}>
@@ -34,7 +47,7 @@ const WeatherDetails = ({ weatherData }) => {
       <View style={styles.detailRow}>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>{i18n.t('uv_index')}</Text>
-          <Text style={styles.detailValue}>Low</Text>
+          <Text style={styles.detailValue}>{getUVIndexCategory(current.uv)}</Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>{i18n.t('rain_chance')}</Text>

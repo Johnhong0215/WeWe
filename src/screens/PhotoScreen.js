@@ -62,8 +62,15 @@ export default function PhotoScreen() {
   
   const takePhoto = async () => {
     try {
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera permissions to take photos!');
+        return;
+      }
+
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: [ImagePicker.MediaType.image],
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 1,
       });
@@ -74,6 +81,7 @@ export default function PhotoScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
+      alert('Error taking photo. Please try again.');
     }
   };
 
@@ -117,13 +125,25 @@ export default function PhotoScreen() {
 
       {/* Add Photo Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, styles.primaryButton]} 
-          onPress={openGallery}
-        >
-          <Ionicons name="add-circle-outline" size={24} color="#fff" />
-          <Text style={[styles.buttonText, styles.primaryButtonText]}>Add Photo</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          {/* Button to open gallery */}
+          <TouchableOpacity 
+            style={[styles.button, styles.primaryButton]} 
+            onPress={openGallery}
+          >
+            <Ionicons name="image-outline" size={24} color="#fff" />
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>Pick from Gallery</Text>
+          </TouchableOpacity>
+
+          {/* Button to launch camera */}
+          <TouchableOpacity 
+            style={[styles.button, styles.primaryButton]} 
+            onPress={takePhoto}
+          >
+            <Ionicons name="camera-outline" size={24} color="#fff" />
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>Take a Photo</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -217,21 +237,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   button: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#37c17f',
   },
   buttonText: {
     marginLeft: 8,
     fontSize: 16,
-    color: '#007AFF',
     fontWeight: '600',
   },
   primaryButtonText: {
