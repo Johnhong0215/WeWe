@@ -13,26 +13,69 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
+const API_URL = 'http://10.194.53.170:5001/analyze';
+
+const analyzeImage = async (uri) => {
+  try {
+    const formData = new FormData();
+    formData.append('image', {
+      uri,
+      type: 'image/jpeg',
+      name: 'photo.jpg',
+    });
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error analyzing image:', error);
+    throw error;
+  }
+};
+
 export default function PhotoScreen() {
   const [photos, setPhotos] = useState([]);
 
   const openGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status === 'granted') {
+    try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        quality: 1,
         allowsEditing: true,
+        quality: 1,
       });
-  
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setPhotos([{ uri: result.assets[0].uri, date: new Date() }, ...photos]);
+
+      if (!result.canceled) {
+        const analysis = await analyzeImage(result.assets[0].uri);
+        setPhotos([{ uri: result.assets[0].uri, date: analysis.date, clothes: analysis.clothes }, ...photos]);
       }
-    } else {
-      alert('Gallery permission is required to select photos');
+    } catch (error) {
+      console.error('Error picking image:', error);
     }
   };
   
+  const takePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: [ImagePicker.MediaType.image],
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const analysis = await analyzeImage(result.assets[0].uri);
+        setPhotos([{ uri: result.assets[0].uri, date: analysis.date, clothes: analysis.clothes }, ...photos]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -57,9 +100,16 @@ export default function PhotoScreen() {
           photos.map((photo, index) => (
             <View key={index} style={styles.historyItem}>
               <Image source={{ uri: photo.uri }} style={styles.historyImage} />
-              <Text style={styles.historyDate}>
-                {photo.date.toLocaleDateString()}
-              </Text>
+              <View style={styles.historyDetails}>
+                <Text style={styles.historyDate}>{photo.date}</Text>
+                <View style={styles.clothesContainer}>
+                  {photo.clothes && photo.clothes.map((item, itemIndex) => (
+                    <View key={itemIndex} style={styles.clothesItem}>
+                      <Text style={styles.clothesText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             </View>
           ))
         )}
@@ -137,9 +187,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 15,
   },
+  historyDetails: {
+    flex: 1,
+  },
   historyDate: {
     fontSize: 16,
     color: '#666',
+    marginBottom: 5,
+  },
+  clothesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+  },
+  clothesItem: {
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  clothesText: {
+    fontSize: 12,
+    color: '#333',
   },
   buttonContainer: {
     padding: 20,
