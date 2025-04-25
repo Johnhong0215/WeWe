@@ -132,7 +132,7 @@ export default function PhotoScreen() {
             onPress={openGallery}
           >
             <Ionicons name="image-outline" size={24} color="#fff" />
-            <Text style={[styles.buttonText, styles.primaryButtonText]}>Pick from Gallery</Text>
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>Gallery</Text>
           </TouchableOpacity>
 
           {/* Button to launch camera */}
@@ -141,7 +141,7 @@ export default function PhotoScreen() {
             onPress={takePhoto}
           >
             <Ionicons name="camera-outline" size={24} color="#fff" />
-            <Text style={[styles.buttonText, styles.primaryButtonText]}>Take a Photo</Text>
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>Camera</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     padding: 20,
-    paddingBottom: 35,
+    paddingBottom: 0,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 80,
   },
   primaryButton: {
     backgroundColor: '#37c17f',
