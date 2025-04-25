@@ -194,8 +194,15 @@ export const storeFeedbackWithWeather = async (feedback, weatherData) => {
       }
     };
 
-    // Store only the new feedback entry
-    await AsyncStorage.setItem(FEEDBACK_HISTORY_KEY, JSON.stringify([feedbackEntry]));
+    // Get existing feedback history
+    const existingHistory = await AsyncStorage.getItem(FEEDBACK_HISTORY_KEY);
+    const history = existingHistory ? JSON.parse(existingHistory) : [];
+    
+    // Add new feedback to the beginning of the array
+    history.unshift(feedbackEntry);
+    
+    // Store updated history
+    await AsyncStorage.setItem(FEEDBACK_HISTORY_KEY, JSON.stringify(history));
     return true;
   } catch (error) {
     console.error('Error storing feedback with weather:', error);

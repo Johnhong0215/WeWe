@@ -59,9 +59,16 @@ export const TemperatureProvider = ({ children }) => {
 
   const updateFeedbackHistory = async (newFeedback) => {
     try {
-      // Store only the new feedback
-      await AsyncStorage.setItem('@feedback_history', JSON.stringify([newFeedback]));
-      setFeedbackHistory([newFeedback]);
+      // Get existing feedback history
+      const existingHistory = await AsyncStorage.getItem('@feedback_history');
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      // Add new feedback to the beginning of the array
+      history.unshift(newFeedback);
+      
+      // Store updated history
+      await AsyncStorage.setItem('@feedback_history', JSON.stringify(history));
+      setFeedbackHistory(history);
     } catch (error) {
       console.error('Error updating feedback history:', error);
     }
