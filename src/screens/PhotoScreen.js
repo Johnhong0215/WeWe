@@ -1,5 +1,3 @@
-// src/screens/PhotoScreen.js
-
 import React, { useState } from 'react';
 import {
   View,
@@ -8,6 +6,7 @@ import {
   Image,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -43,6 +42,46 @@ const analyzeImage = async (uri) => {
 export default function PhotoScreen() {
   const [photos, setPhotos] = useState([]);
 
+  const handleImage = async (uri) => {
+    const id = Date.now(); // unique id for the photo item
+    const placeholder = {
+      id,
+      uri,
+      date: new Date().toISOString().split("T")[0],
+      clothes: ['AI is analyzing...'],
+    };
+    setPhotos(prev => [placeholder, ...prev]);
+
+    try {
+      const analysis = await analyzeImage(uri);
+
+      if (analysis.status === "No") {
+        setPhotos(prev => prev.filter(item => item.id !== id));
+        const message =
+          analysis.reason === "More than one person detected"
+            ? "Please upload a photo with only one person."
+            : "Couldn't recognize a person wearing clothes. Try again with a clearer photo.";
+        Alert.alert("Image Not Valid", message);
+      } else {
+        setPhotos(prev =>
+          prev.map(item =>
+            item.id === id
+              ? {
+                  ...item,
+                  clothes: analysis.clothes,
+                  date: analysis.date,
+                }
+              : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error analyzing image:', error);
+      setPhotos(prev => prev.filter(item => item.id !== id));
+      Alert.alert("Analysis Error", "Something went wrong while analyzing. Try again.");
+    }
+  };
+
   const openGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -52,17 +91,15 @@ export default function PhotoScreen() {
       });
 
       if (!result.canceled) {
-        const analysis = await analyzeImage(result.assets[0].uri);
-        setPhotos([{ uri: result.assets[0].uri, date: analysis.date, clothes: analysis.clothes }, ...photos]);
+        await handleImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
     }
   };
-  
+
   const takePhoto = async () => {
     try {
-      // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         alert('Sorry, we need camera permissions to take photos!');
@@ -76,8 +113,7 @@ export default function PhotoScreen() {
       });
 
       if (!result.canceled) {
-        const analysis = await analyzeImage(result.assets[0].uri);
-        setPhotos([{ uri: result.assets[0].uri, date: analysis.date, clothes: analysis.clothes }, ...photos]);
+        await handleImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -106,7 +142,7 @@ export default function PhotoScreen() {
           </View>
         ) : (
           photos.map((photo, index) => (
-            <View key={index} style={styles.historyItem}>
+            <View key={photo.id || index} style={styles.historyItem}>
               <Image source={{ uri: photo.uri }} style={styles.historyImage} />
               <View style={styles.historyDetails}>
                 <Text style={styles.historyDate}>{photo.date}</Text>
@@ -123,10 +159,9 @@ export default function PhotoScreen() {
         )}
       </ScrollView>
 
-      {/* Add Photo Button */}
+      {/* Add Photo Buttons */}
       <View style={styles.buttonContainer}>
         <View style={styles.buttonRow}>
-          {/* Button to open gallery */}
           <TouchableOpacity 
             style={[styles.button, styles.primaryButton]} 
             onPress={openGallery}
@@ -135,7 +170,6 @@ export default function PhotoScreen() {
             <Text style={[styles.buttonText, styles.primaryButtonText]}>Gallery</Text>
           </TouchableOpacity>
 
-          {/* Button to launch camera */}
           <TouchableOpacity 
             style={[styles.button, styles.primaryButton]} 
             onPress={takePhoto}
